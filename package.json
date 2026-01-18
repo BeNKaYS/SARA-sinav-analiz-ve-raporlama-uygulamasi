@@ -46,7 +46,7 @@
       ],
       "icon": "public/icon.ico",
       "legalTrademarks": "Sercan ÖZDEMİR",
-      "signAndEditExecutable": false
+      "signAndEditExecutable": true
     },
     "nsis": {
       "oneClick": false,
