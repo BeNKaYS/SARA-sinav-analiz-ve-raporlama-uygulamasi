@@ -1,7 +1,7 @@
 # 🎓 Optik Form Değerlendirme Uygulaması
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.5.0-blue.svg?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/version-1.6.0-blue.svg?style=for-the-badge" />
   <img src="https://img.shields.io/badge/platform-Windows-lightgrey.svg?style=for-the-badge" />
   <img src="https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge" />
   <img src="https://img.shields.io/badge/status-active-success.svg?style=for-the-badge" />
@@ -128,10 +128,17 @@ optik-degerlendirme-app/
 
 ## 📜 Sürüm Geçmişi
 
-### v1.4.0 (Güncel)
+### v1.6.0 (Güncel)
+- ✨ **Yeni:** FMT Düzenleyici entegrasyonu (Görsel editör ve ASCII önizleme).
+- 🐛 **Düzeltme:** Başarı oranı hesaplama mantığı güncellendi (Sınava girenler -> Okunan veri).
+- 🎨 **Geliştirme:** Ruler ve Grid hizalaması optimize edildi (130 karakter sabitleme).
+
+### v1.5.0
 - ✨ **Yeni:** Zengin içerikli Yardım Menüsü ve Kullanım Kılavuzu entegrasyonu.
 - 🐛 **Düzeltme:** İstatistik tablosundaki veri eşleştirme hatası giderildi.
 - 🎨 **Geliştirme:** Tablo görünümleri ve ikon setleri yenilendi.
+
+### v1.4.0
 
 ### v1.3.0
 - ✨ **Yeni:** Kopya analiz algoritması eklendi.

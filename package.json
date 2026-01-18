@@ -4,7 +4,7 @@
   "description": "Sınav Değerlendirme Uygulaması",
   "author": "Sercan ÖZDEMİR <sercanozdemir@yandex.com>",
   "private": true,
-  "version": "1.5.0",
+  "version": "1.6.0",
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"npm run vite\" \"npm run electron\"",

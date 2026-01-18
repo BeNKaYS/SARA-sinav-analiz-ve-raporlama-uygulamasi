@@ -17,7 +17,7 @@ export default function AboutTab() {
                 <div className="about-header text-center">
                     <div className="logo-placeholder">👁️</div>
                     <h1>Optik Değerlendirme</h1>
-                    <p className="version">v1.5.0 (Stable)</p>
+                    <p className="version">v1.6.0 (Stable)</p>
                     <p className="description">
                         Eğitim kurumları için geliştirilmiş, hızlı, güvenli ve çevrimdışı çalışabilen
                         gelişmiş optik form okuma ve değerlendirme sistemi.

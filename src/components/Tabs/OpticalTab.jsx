@@ -17,13 +17,23 @@ export default function OpticalTab({ data, setData, attendanceData, onNext }) {
     // -------------------------------------------------------------------------
     //  STATE YÖNETİMİ & REF
     // -------------------------------------------------------------------------
-    const fileInputRef = useRef(null);
-    const handleTriggerUpload = () => fileInputRef.current?.click();
+    const fmtFileInputRef = useRef(null);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [fileName, setFileName] = useState('');
     const [rawText, setRawText] = useState(null); // Ham veri (String olarak saklanır)
+    const [fmtContent, setFmtContent] = useState(''); // FMT dosya içeriği
+    const [fmtFileName, setFmtFileName] = useState('');
+
+    // Grid boyutu state'i (SVG önizleme için)
+    const [gridWidth, setGridWidth] = useState(58);
+    const [gridHeight, setGridHeight] = useState(58);
+
+    // FMT Edit State
+    const [isEditingFmt, setIsEditingFmt] = useState(false);
+    const [tempFmtContent, setTempFmtContent] = useState('');
+
 
     // Alanlar State'i
     const [fields, setFields] = useState(() => {
@@ -37,13 +47,13 @@ export default function OpticalTab({ data, setData, attendanceData, onNext }) {
             }
         }
         return [
-            { key: 'sira', label: 'Sıra No', icon: '#️⃣', color: '#3b82f6', charset: '' },
-            { key: 'tcNo', label: 'TC Kimlik', icon: '🆔', color: '#ef4444', charset: '0-9' },
-            { key: 'adSoyad', label: 'Adı Soyadı', icon: '👤', color: '#172554', charset: 'A-Z' },
-            { key: 'salonNo', label: 'Salon No', icon: '🏫', color: '#f97316', charset: '0-9' },
-            { key: 'girmedi', label: 'Durum', icon: '📋', color: '#dc2626', charset: 'İ,G' },
-            { key: 'kitapcik', label: 'Kitapçık', icon: '📖', color: '#7c3aed', charset: 'A,B' },
-            { key: 'cevaplar', label: 'Cevaplar', icon: '✏️', color: '#10b981', charset: 'A,B,C,D' }
+            { key: 'sira', label: 'Sıra No', icon: '#️⃣', color: '#3b82f6' },
+            { key: 'tcNo', label: 'TC Kimlik', icon: '🆔', color: '#ef4444' },
+            { key: 'adSoyad', label: 'Adı Soyadı', icon: '👤', color: '#172554' },
+            { key: 'salonNo', label: 'Salon No', icon: '🏫', color: '#f97316' },
+            { key: 'girmedi', label: 'Durum', icon: '📋', color: '#dc2626' },
+            { key: 'kitapcik', label: 'Kitapçık', icon: '📖', color: '#7c3aed' },
+            { key: 'cevaplar', label: 'Cevaplar', icon: '✏️', color: '#10b981' }
         ];
     });
 
@@ -62,8 +72,6 @@ export default function OpticalTab({ data, setData, attendanceData, onNext }) {
     const [activeRowIndex, setActiveRowIndex] = useState(0); // Satır haritası için aktif satır indeksi
     const [isEditingFields, setIsEditingFields] = useState(false); // Alan düzenleme modu
 
-    // FMT/BLDM Analysis State
-    const [formatAnalysis, setFormatAnalysis] = useState([]); // Array of parsed objects
     const [parserConfig, setParserConfig] = useState(() => {
         // LocalStorage'dan kayıtlı ayarları okumayı dene
         const savedConfig = localStorage.getItem('optical_parser_config');
@@ -119,11 +127,9 @@ export default function OpticalTab({ data, setData, attendanceData, onNext }) {
     const getCleanConfig = () => {
         const cleanConfig = {};
         Object.keys(parserConfig).forEach(key => {
-            const fieldDef = fields.find(f => f.key === key);
             cleanConfig[key] = {
                 start: parseInt(parserConfig[key].start) || 0,
-                length: parserConfig[key].length === '' ? null : parseInt(parserConfig[key].length),
-                charset: fieldDef?.charset || null
+                length: parserConfig[key].length === '' ? null : parseInt(parserConfig[key].length)
             };
         });
         return cleanConfig;
@@ -437,128 +443,140 @@ export default function OpticalTab({ data, setData, attendanceData, onNext }) {
     };
 
     /**
-     * FMT/BLDM Format Dosyası Yükleme ve Detaylı Analiz
+     * FMT dosyasını yükler ve içeriğini gösterir (Parse etmez)
      */
-    const handleFormatUpload = (e) => {
+    const handleFmtLoad = (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
+        setFmtFileName(file.name);
         const reader = new FileReader();
         reader.onload = (event) => {
-            const content = event.target.result;
-            try {
-                const lines = content.split(/\r?\n/);
-                const newConfig = { ...parserConfig };
-                let newFields = [...fields]; // Mevcut alanların kopyası
-                let hasChanges = false;
-                const analysisResult = [];
-
-                let answerBlocks = [];
-
-                lines.forEach((line, index) => {
-                    if (!line.trim()) return;
-
-                    // Format: ... = StartCol = EndCol = Type = ... = [LABEL]
-                    const parts = line.split('=');
-                    // Index 2: Start Col, Index 3: End Col
-                    if (parts.length < 5) return;
-
-                    const rawStartCol = parseInt(parts[2], 10);
-                    const rawEndCol = parseInt(parts[3], 10);
-
-                    if (isNaN(rawStartCol) || isNaN(rawEndCol)) return;
-
-                    // Dosya 1-based, Biz 0-based
-                    const start = rawStartCol - 1;
-                    // Uzunluk: Bitiş - Başlangıç + 1
-                    const length = rawEndCol - rawStartCol + 1;
-
-                    // Label bulma
-                    let label = "BİLİNMİYOR";
-                    const labelMatch = line.match(/\[(.*?)\]/);
-                    if (labelMatch) {
-                        label = labelMatch[1].trim(); // Köşeli parantez içi
-                    }
-
-                    // Tip Belirleme
-                    const typeCode = parts[4];
-                    const type = typeCode === 'K' ? 'Karakter' : (typeCode === 'S' ? 'Sayı' : typeCode);
-
-                    // --- OTOMATİK EŞLEŞTİRME VE DİNAMİK ALAN ---
-                    const upperLabel = label.toUpperCase();
-                    let matchedKey = null;
-
-                    // 1. Standart Alanlar
-                    if (['TC', 'ADAYNO', 'TCNO', 'OGRENCI NO', 'TC KIMLIK'].some(k => upperLabel.includes(k))) {
-                        matchedKey = 'tcNo';
-                    } else if (['AD SOYAD', 'ADI', 'ISIM', 'AD', 'SOYAD'].some(k => upperLabel.includes(k)) && !upperLabel.includes('BABA')) {
-                        matchedKey = 'adSoyad';
-                    } else if (['SINIF', 'SALON', 'DERSLIK'].some(k => upperLabel.includes(k))) {
-                        matchedKey = 'salonNo';
-                    } else if (['KITAPCIK', 'KITAPÇIK', 'TÜR', 'TUR'].some(k => upperLabel.includes(k))) {
-                        matchedKey = 'kitapcik';
-                    } else if (['DURUM', 'GIRMEDI', 'IPTAL'].some(k => upperLabel.includes(k))) {
-                        matchedKey = 'girmedi';
-                    } else if (upperLabel.includes('CEVAP')) {
-                        // Cevapları ayrı topla
-                        answerBlocks.push({ start, end: start + length });
-                        matchedKey = 'cevaplar'; // Sadece işaretlemek için
-                    }
-
-                    // 2. Dinamik Alan Eşleştirme veya Oluşturma
-                    if (!matchedKey) {
-                        // Bu etikete sahip bir alan zaten var mı?
-                        const existingField = newFields.find(f => f.label.toUpperCase() === upperLabel);
-
-                        if (existingField) {
-                            matchedKey = existingField.key;
-                        } else {
-                            // YOKSA YENİ OLUŞTUR
-                            // Renk seçimi (basit bir döngü veya rastgele)
-                            const colors = ['#f472b6', '#22d3ee', '#a78bfa', '#fbbf24', '#34d399'];
-                            const randomColor = colors[Math.floor(Math.random() * colors.length)];
-
-                            const newKey = `field_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-                            const newDiffField = {
-                                key: newKey,
-                                label: label, // Orijinal label
-                                icon: "🏷️",
-                                color: randomColor
-                            };
-                            newFields.push(newDiffField);
-                            matchedKey = newKey;
-                        }
-                    }
-
-                    // Config güncelle (Cevaplar hariç, onlar toplu yapılacak)
-                    if (matchedKey && matchedKey !== 'cevaplar') {
-                        newConfig[matchedKey] = { start, length };
-                        hasChanges = true;
-                    }
-
-                    // Analiz listesine ekle
-                    analysisResult.push({ lineNo: index + 1, original: line, start, length, label, type, rawStart: rawStartCol, rawEnd: rawEndCol });
-                });
-
-                // Cevap bloklarını birleştir
-                if (answerBlocks.length > 0) {
-                    const minStart = Math.min(...answerBlocks.map(b => b.start));
-                    const maxEndPos = Math.max(...answerBlocks.map(b => b.end));
-                    newConfig.cevaplar = { start: minStart, length: maxEndPos - minStart };
-                    hasChanges = true;
-                }
-
-                setFormatAnalysis(analysisResult);
-                alert(`${analysisResult.length} satır analiz edildi. Sağ panelde detayları görebilirsiniz.`);
-
-            } catch (err) {
-                console.error(err);
-                setError('Format dosyası işlenirken hata oluştu.');
-            }
+            setFmtContent(event.target.result);
         };
-        reader.readAsText(file, 'ISO-8859-9'); // Türkçe karakter desteği için
+        reader.readAsText(file, 'ISO-8859-9'); // Türkçe karakter desteği
     };
 
+    const clearFmtContent = () => {
+        setFmtContent('');
+        setFmtFileName('');
+        if (fmtFileInputRef.current) {
+            fmtFileInputRef.current.value = '';
+        }
+    };
+
+    /**
+     * FMT içeriğini 58x58 Grid üzerinde ASCII art formatında görselleştirir
+     * Direction (D/Y) ve Content desteği ile
+     */
+    const generateAsciiPreview = () => {
+        if (!fmtContent) return '';
+
+        const GRID_W = 58;
+        const GRID_H = 58;
+
+        // Boş canvas oluştur
+        const canvas = Array(GRID_H).fill(null).map(() => Array(GRID_W).fill(' '));
+
+        // Kutu çizme fonksiyonu
+        const drawBox = (x1, x2, y1, y2, fill = true) => {
+            // Sınır kontrolü
+            x1 = Math.max(0, x1);
+            x2 = Math.min(GRID_W - 1, x2);
+            y1 = Math.max(0, y1);
+            y2 = Math.min(GRID_H - 1, y2);
+
+            // Köşeler
+            canvas[y1][x1] = '┌';
+            canvas[y1][x2] = '┐';
+            canvas[y2][x1] = '└';
+            canvas[y2][x2] = '┘';
+
+            // Kenarlar
+            for (let x = x1 + 1; x < x2; x++) {
+                canvas[y1][x] = '─';
+                canvas[y2][x] = '─';
+            }
+
+            for (let y = y1 + 1; y < y2; y++) {
+                canvas[y][x1] = '│';
+                canvas[y][x2] = '│';
+            }
+
+            // İç dolgu
+            if (fill) {
+                for (let y = y1 + 1; y < y2; y++) {
+                    for (let x = x1 + 1; x < x2; x++) {
+                        canvas[y][x] = '·';
+                    }
+                }
+            }
+        };
+
+        // Karakter yerleştirme fonksiyonu (Direction desteği ile)
+        const drawContent = (x1, x2, y1, y2, direction, content) => {
+            if (!content) return;
+
+            if (direction === 'D') {
+                // Dikey (Vertical): X aralığındaki her sütun için, Y boyunca içeriği yaz
+                for (let x = x1; x <= x2 && x < GRID_W; x++) {
+                    for (let y = y1; y <= y2 && y < GRID_H; y++) {
+                        const charIdx = y - y1;
+                        if (charIdx < content.length) {
+                            // Nokta grid: büyük belirgin nokta
+                            canvas[y][x] = '●';
+                        }
+                    }
+                }
+            } else if (direction === 'Y') {
+                // Yatay (Horizontal): Y aralığındaki her satır için, X boyunca içeriği yaz
+                for (let y = y1; y <= y2 && y < GRID_H; y++) {
+                    for (let x = x1; x <= x2 && x < GRID_W; x++) {
+                        const charIdx = x - x1;
+                        if (charIdx < content.length) {
+                            // Nokta grid: büyük belirgin nokta
+                            canvas[y][x] = '●';
+                        }
+                    }
+                }
+            }
+        };
+
+        // FMT satırlarını parse et
+        const lines = fmtContent.split(/\r?\n/).filter(l => l.trim());
+
+        lines.forEach((line) => {
+            if (!line.trim() || line.startsWith('#')) return;
+
+            const parts = line.split('=');
+            if (parts.length < 7) return;
+
+            const yStart = parseInt(parts[0], 10);
+            const yEnd = parseInt(parts[1], 10);
+            const xStart = parseInt(parts[2], 10);
+            const xEnd = parseInt(parts[3], 10);
+            // parts[4] = Type (K/S)
+            const direction = parts[5]; // D: Dikey, Y: Yatay
+            const content = parts[6]; // İçerik (karakterler)
+
+            if (isNaN(xStart) || isNaN(xEnd) || isNaN(yStart) || isNaN(yEnd)) return;
+
+            // İçerik varsa karakterleri yerleştir, yoksa sadece kutu çiz
+            if (content && content.length > 0) {
+                drawContent(xStart, xEnd, yStart, yEnd, direction, content);
+            } else {
+                drawBox(xStart, xEnd, yStart, yEnd, true);
+            }
+        });
+
+        // Canvas'ı string'e çevir
+        let ascii = '\nA4 OMR – TEXT BOX ÖN GÖRÜNÜM (58x58 GRID)\n\n';
+        canvas.forEach((row, y) => {
+            ascii += `Y=${y.toString().padStart(2, '0')} ${row.join('')}\n`;
+        });
+
+        return ascii;
+    };
 
 
 
@@ -567,12 +585,29 @@ export default function OpticalTab({ data, setData, attendanceData, onNext }) {
     // -------------------------------------------------------------------------
 
     const addField = () => {
+        // Renk paleti - farklı renkler döngüsel olarak kullanılır
+        const colorPalette = [
+            '#3b82f6', // Mavi
+            '#ef4444', // Kırmızı
+            '#10b981', // Yeşil
+            '#f97316', // Turuncu
+            '#8b5cf6', // Mor
+            '#ec4899', // Pembe
+            '#14b8a6', // Teal
+            '#f59e0b', // Sarı
+            '#06b6d4', // Cyan
+            '#6366f1', // İndigo
+        ];
+
         const newKey = `field_${Date.now()}`;
+        // Mevcut alan sayısına göre renk seç (döngüsel)
+        const colorIndex = fields.length % colorPalette.length;
+
         const newField = {
             key: newKey,
             label: "Yeni Alan",
             icon: "📝",
-            color: "#64748b"
+            color: colorPalette[colorIndex]
         };
 
         setFields([...fields, newField]);
@@ -601,9 +636,7 @@ export default function OpticalTab({ data, setData, attendanceData, onNext }) {
         setFields(fields.map(f => f.key === key ? { ...f, label: newLabel } : f));
     };
 
-    const updateFieldCharset = (key, newCharset) => {
-        setFields(fields.map(f => f.key === key ? { ...f, charset: newCharset } : f));
-    };
+
 
 
     // -------------------------------------------------------------------------
@@ -763,13 +796,13 @@ export default function OpticalTab({ data, setData, attendanceData, onNext }) {
                 <div className="ruler-wrapper">
                     {/* Ruler Numbers */}
                     <div className="ruler-numbers">
-                        {Array.from({ length: Math.ceil((rawText ? rawText.split(/\r?\n/)[activeRowIndex || 0].length : 120) / 10) + 1 }).map((_, i) => (
+                        {Array.from({ length: Math.ceil(Math.max((rawText ? rawText.split(/\r?\n/)[activeRowIndex || 0].length : 0), 130) / 10) + 1 }).map((_, i) => (
                             <span key={i} style={{ left: `${i * 10 * 10}px` }}>{i * 10}</span>
                         ))}
                     </div>
                     {/* Grid Visualization */}
                     <div className="row-map-grid" style={{ width: 'fit-content', minWidth: '100%' }}>
-                        {Array.from({ length: rawText ? rawText.split(/\r?\n/)[activeRowIndex || 0].length : 120 }).map((_, i) => {
+                        {Array.from({ length: Math.max((rawText ? rawText.split(/\r?\n/)[activeRowIndex || 0].length : 0), 130) }).map((_, i) => {
                             const field = getFieldAt(i);
                             const char = rawText ? (rawText.split(/\r?\n/)[activeRowIndex || 0]?.[i] || '') : '';
 
@@ -811,9 +844,15 @@ export default function OpticalTab({ data, setData, attendanceData, onNext }) {
                 </div>
             </div>
 
-            {/* Ayar Paneli ve Format Tablosu Container */}
+            {/* Ayar Paneli */}
             {showSettings && (
-                <div style={{ display: 'grid', gridTemplateColumns: formatAnalysis.length > 0 ? '1fr 1fr' : '1fr', gap: '20px', marginTop: '20px' }}>
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(350px, 400px) minmax(400px, 450px) minmax(400px, 1fr)',
+                    gap: '15px',
+                    marginTop: '20px',
+                    overflowX: 'auto'
+                }}>
 
                     {/* SOL PANEL: Ayarlar */}
                     <div className="settings-panel" style={{ marginTop: 0 }}>
@@ -823,16 +862,6 @@ export default function OpticalTab({ data, setData, attendanceData, onNext }) {
                                 <h3>TXT Format Ayarları</h3>
                             </div>
                             <div className="setting-actions">
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleFormatUpload}
-                                    style={{ display: 'none' }}
-                                    accept=".fmt,.bldm,.txt"
-                                />
-                                <button className="action-btn" onClick={handleTriggerUpload} style={{ backgroundColor: '#f59e0b', color: 'white' }}>
-                                    <span>📄</span> Format Yükle
-                                </button>
                                 <button className="action-btn import" onClick={handleImportConfig}>
                                     <span>📂</span> İçe Aktar
                                 </button>
@@ -847,7 +876,6 @@ export default function OpticalTab({ data, setData, attendanceData, onNext }) {
                                 <div className="col-field">Alan</div>
                                 <div className="col-start">Başlangıç Pozisyonu</div>
                                 <div className="col-length">Uzunluk (Karakter)</div>
-                                <div className="col-charset">Karakter Seti</div>
                                 <div></div>
                             </div>
 
@@ -893,15 +921,7 @@ export default function OpticalTab({ data, setData, attendanceData, onNext }) {
                                             disabled={!isEditingFields}
                                         />
                                     </div>
-                                    <div className="col-charset">
-                                        <input
-                                            type="text"
-                                            value={field.charset || ''}
-                                            onChange={(e) => updateFieldCharset(field.key, e.target.value)}
-                                            placeholder="A,B,C"
-                                            disabled={!isEditingFields}
-                                        />
-                                    </div>
+
                                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                                         {isEditingFields && (
                                             <button
@@ -975,50 +995,450 @@ export default function OpticalTab({ data, setData, attendanceData, onNext }) {
                         </div>
                     </div>
 
-                    {/* SAĞ PANEL: Format Analiz Tablosu */}
-                    {formatAnalysis.length > 0 && (
-                        <div className="settings-panel format-analysis-panel" style={{ marginTop: 0, display: 'flex', flexDirection: 'column' }}>
-                            <div className="settings-header">
-                                <div className="settings-title">
-                                    <span style={{ fontSize: '1.5rem' }}>📋</span>
-                                    <h3>Biçim Dosyası Analizi</h3>
-                                    <span className="analysis-badge">{formatAnalysis.length} Alan</span>
-                                </div>
-                                <button className="secondary-btn clear-analysis-btn" onClick={() => setFormatAnalysis([])}>
-                                    🗑️ Temizle
-                                </button>
+                    {/* SAĞ PANEL: FMT Dosya Görüntüleme */}
+                    <div className="settings-panel" style={{ marginTop: 0 }}>
+                        <div className="settings-header">
+                            <div className="settings-title">
+                                <span className="settings-icon">📄</span>
+                                <h3>FMT Dosya Görüntüleme</h3>
                             </div>
+                            <div className="setting-actions">
+                                {isEditingFmt ? (
+                                    <>
+                                        <button
+                                            className="action-btn"
+                                            onClick={() => {
+                                                setFmtContent(tempFmtContent);
+                                                setIsEditingFmt(false);
+                                            }}
+                                            style={{ backgroundColor: '#10b981', color: 'white' }}
+                                        >
+                                            <span>💾</span> Kaydet
+                                        </button>
+                                        <button
+                                            className="action-btn"
+                                            onClick={() => {
+                                                setIsEditingFmt(false);
+                                                setTempFmtContent('');
+                                            }}
+                                            style={{ backgroundColor: '#94a3b8', color: 'white' }}
+                                        >
+                                            <span>❌</span> İptal
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <input
+                                            type="file"
+                                            ref={fmtFileInputRef}
+                                            onChange={handleFmtLoad}
+                                            style={{ display: 'none' }}
+                                            accept=".fmt,.bldm,.txt"
+                                        />
+                                        <button
+                                            className="action-btn"
+                                            onClick={() => fmtFileInputRef.current?.click()}
+                                            style={{ backgroundColor: '#10b981', color: 'white' }}
+                                        >
+                                            <span>📂</span> FMT Yükle
+                                        </button>
 
-                            <div className="format-analysis-list">
-                                {formatAnalysis.map((item, idx) => (
-                                    <div key={idx} className="analysis-item">
-                                        <div className="analysis-item-header">
-                                            <span className={`label-badge ${item.label === 'BİLİNMİYOR' ? 'unknown' : 'known'}`}>
-                                                {item.label}
-                                            </span>
-                                            <span className={`type-chip type-${item.type.toLowerCase()}`}>
-                                                {item.type === 'Karakter' ? '🔤' : '🔢'} {item.type}
-                                            </span>
-                                        </div>
-                                        <div className="analysis-item-details">
-                                            <div className="detail-group">
-                                                <span className="detail-label">Pozisyon:</span>
-                                                <span className="detail-value">{item.rawStart} → {item.rawEnd}</span>
-                                            </div>
-                                            <div className="detail-group">
-                                                <span className="detail-label">Uzunluk:</span>
-                                                <span className="detail-value highlight">{item.length} karakter</span>
-                                            </div>
-                                            <div className="detail-group" style={{ gridColumn: '1 / -1', marginTop: '8px', padding: '8px', background: '#f8fafc', borderRadius: '6px' }}>
-                                                <span className="detail-label" style={{ display: 'block', marginBottom: '4px' }}>FMT Göster:</span>
-                                                <code style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: '#1e40af', wordBreak: 'break-all' }}>{item.original}</code>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
+                                        {fmtContent && (
+                                            <>
+                                                <button
+                                                    className="action-btn"
+                                                    onClick={() => {
+                                                        setTempFmtContent(fmtContent);
+                                                        setIsEditingFmt(true);
+                                                    }}
+                                                    style={{ backgroundColor: '#3b82f6', color: 'white' }}
+                                                >
+                                                    <span>✏️</span> Düzenle
+                                                </button>
+                                                <button
+                                                    className="action-btn"
+                                                    onClick={clearFmtContent}
+                                                    style={{ backgroundColor: '#ef4444', color: 'white' }}
+                                                >
+                                                    <span>🗑️</span> Temizle
+                                                </button>
+                                            </>
+                                        )}
+                                    </>
+                                )}
                             </div>
                         </div>
-                    )}
+
+                        {fmtFileName && !isEditingFmt && (
+                            <div style={{
+                                padding: '8px 12px',
+                                background: 'rgba(16, 185, 129, 0.1)',
+                                borderRadius: '6px',
+                                marginBottom: '12px',
+                                fontSize: '0.85rem',
+                                color: '#059669',
+                                fontWeight: '600'
+                            }}>
+                                📁 {fmtFileName}
+                            </div>
+                        )}
+
+                        <div style={{
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            padding: '12px',
+                            minHeight: '300px',
+                            maxHeight: '500px',
+                            overflow: 'auto'
+                        }}>
+                            {isEditingFmt ? (
+                                <textarea
+                                    value={tempFmtContent}
+                                    onChange={(e) => setTempFmtContent(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        height: '450px',
+                                        fontFamily: 'JetBrains Mono, monospace',
+                                        fontSize: '0.75rem',
+                                        border: 'none',
+                                        outline: 'none',
+                                        resize: 'none',
+                                        background: 'transparent',
+                                        lineHeight: '1.6',
+                                        color: '#1e293b'
+                                    }}
+                                    spellCheck="false"
+                                />
+                            ) : fmtContent ? (
+                                <pre style={{
+                                    margin: 0,
+                                    fontSize: '0.75rem',
+                                    lineHeight: '1.6',
+                                    fontFamily: 'JetBrains Mono, monospace',
+                                    color: '#1e293b',
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-all'
+                                }}>
+                                    {fmtContent.split(/\r?\n/).map((line, i) => {
+                                        if (!line.trim() || line.startsWith('#')) return <div key={i}>{line}</div>;
+
+                                        const parts = line.split('=');
+                                        let contentIndex = -1;
+
+                                        // Format algılama ve content index bulma
+                                        if (parts.length >= 7 && !isNaN(parseInt(parts[0])) && !isNaN(parseInt(parts[1]))) {
+                                            contentIndex = 6;
+                                        } else if (parts.length >= 4) {
+                                            const dirIndex = parts.findIndex(p => p === 'D' || p === 'Y');
+                                            if (dirIndex === 2 && parts.length > 5) contentIndex = 5;
+                                            else if (dirIndex === 4 && parts.length > 5) contentIndex = 5;
+                                        }
+
+                                        return (
+                                            <div key={i}>
+                                                {parts.map((part, pIdx) => (
+                                                    <span key={pIdx}>
+                                                        {pIdx === contentIndex ? (
+                                                            <span style={{ backgroundColor: '#fef08a', color: '#854d0e', fontWeight: 'bold', padding: '0 2px', borderRadius: '2px' }}>
+                                                                {part}
+                                                            </span>
+                                                        ) : (
+                                                            part
+                                                        )}
+                                                        {pIdx < parts.length - 1 && '='}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        );
+                                    })}
+                                </pre>
+                            ) : (
+                                <div style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    height: '300px',
+                                    color: '#94a3b8',
+                                    textAlign: 'center'
+                                }}>
+                                    <span style={{ fontSize: '3rem', marginBottom: '10px' }}>📄</span>
+                                    <p style={{ margin: 0, fontSize: '0.9rem' }}>FMT dosyası yüklenmedi</p>
+                                    <p style={{ margin: '5px 0 0 0', fontSize: '0.75rem' }}>Yukarıdaki "FMT Yükle" veya "Düzenle" butonunu kullanın</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* SAĞ PANEL: Görsel Önizleme */}
+                    <div className="settings-panel" style={{ marginTop: 0 }}>
+                        <div className="settings-header">
+                            <div className="settings-title">
+                                <span className="settings-icon">🎨</span>
+                                <h3>Görsel Önizleme</h3>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <label style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600' }}>
+                                    Grid:
+                                </label>
+                                <input
+                                    type="number"
+                                    value={gridWidth}
+                                    onChange={(e) => setGridWidth(Math.max(1, Math.min(150, parseInt(e.target.value) || 58)))}
+                                    style={{
+                                        width: '50px',
+                                        padding: '4px 6px',
+                                        border: '1px solid #cbd5e1',
+                                        borderRadius: '4px',
+                                        fontSize: '0.7rem',
+                                        textAlign: 'center'
+                                    }}
+                                    min="1"
+                                    max="150"
+                                />
+                                <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>×</span>
+                                <input
+                                    type="number"
+                                    value={gridHeight}
+                                    onChange={(e) => setGridHeight(Math.max(1, Math.min(150, parseInt(e.target.value) || 58)))}
+                                    style={{
+                                        width: '50px',
+                                        padding: '4px 6px',
+                                        border: '1px solid #cbd5e1',
+                                        borderRadius: '4px',
+                                        fontSize: '0.7rem',
+                                        textAlign: 'center'
+                                    }}
+                                    min="1"
+                                    max="150"
+                                />
+                            </div>
+                        </div>
+
+                        <div style={{
+                            background: '#ffffff',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            padding: '16px',
+                            minHeight: '300px',
+                            maxHeight: '700px',
+                            overflow: 'auto',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                        }}>
+                            {fmtContent ? (
+                                <svg
+                                    width={(gridWidth + 1) * 10}
+                                    height={(gridHeight + 1) * 10}
+                                    viewBox={`0 0 ${(gridWidth + 1) * 10} ${(gridHeight + 1) * 10}`}
+                                    style={{ border: '2px solid #3b82f6', borderRadius: '4px' }}
+                                >
+                                    {/* Grid arka plan */}
+                                    <rect width={(gridWidth + 1) * 10} height={(gridHeight + 1) * 10} fill="#f8fafc" />
+
+                                    {/* Dikey Grid çizgileri */}
+                                    {Array.from({ length: gridWidth + 2 }).map((_, i) => (
+                                        <line
+                                            key={`v-grid-${i}`}
+                                            x1={i * 10} y1="0"
+                                            x2={i * 10} y2={(gridHeight + 1) * 10}
+                                            stroke="#e2e8f0"
+                                            strokeWidth="0.5"
+                                        />
+                                    ))}
+
+                                    {/* Yatay Grid çizgileri */}
+                                    {Array.from({ length: gridHeight + 2 }).map((_, i) => (
+                                        <line
+                                            key={`h-grid-${i}`}
+                                            x1="0" y1={i * 10}
+                                            x2={(gridWidth + 1) * 10} y2={i * 10}
+                                            stroke="#e2e8f0"
+                                            strokeWidth="0.5"
+                                        />
+                                    ))}
+
+                                    {/* FMT verilerini çiz */}
+                                    {(() => {
+                                        const dots = [];
+                                        const labels = [];
+                                        const lines = fmtContent.split(/\r?\n/).filter(l => l.trim());
+
+                                        lines.forEach((line, lineIdx) => {
+                                            if (!line.trim() || line.startsWith('#')) return;
+
+                                            const parts = line.split('=');
+
+                                            let xStart, xEnd, yStart, yEnd, direction, content, label;
+
+                                            // Label'ı bul (2 format)
+                                            // Format 1: [LABEL]
+                                            const bracketMatch = line.match(/\[([^\]]+)\]/);
+                                            if (bracketMatch) {
+                                                label = bracketMatch[1];
+                                            }
+                                            // Format 2: ...=X2=LABEL= veya ...=X=LABEL=
+                                            else if (parts.length >= 9) {
+                                                // Son parametreler label olabilir
+                                                const lastPart = parts[parts.length - 1];
+                                                const secondLastPart = parts[parts.length - 2];
+
+                                                // Eğer son kısım boşsa, bir önceki label'dır
+                                                if (lastPart === '' && secondLastPart && secondLastPart.match(/[A-ZÇĞİÖŞÜ\s]+/)) {
+                                                    label = secondLastPart;
+                                                }
+                                                // Veya son kısım text ise
+                                                else if (lastPart && lastPart.match(/[A-ZÇĞİÖŞÜ\s]+/)) {
+                                                    label = lastPart;
+                                                }
+                                            }
+
+                                            // Format 1: 7+ parametreli
+                                            if (parts.length >= 7 && !isNaN(parseInt(parts[0])) && !isNaN(parseInt(parts[1])) && !isNaN(parseInt(parts[2])) && !isNaN(parseInt(parts[3]))) {
+                                                const p0 = parseInt(parts[0], 10);
+                                                const p1 = parseInt(parts[1], 10);
+                                                const p2 = parseInt(parts[2], 10);
+                                                const p3 = parseInt(parts[3], 10);
+                                                const type = parts[4];
+
+                                                // Type parametresine göre format belirle
+                                                // K veya S = eski format (yStart=yEnd=xStart=xEnd)
+                                                // H = yeni format (xStart=xEnd=yStart=yEnd)
+                                                if (type === 'H') {
+                                                    // xStart=xEnd=yStart=yEnd=Type=Direction=Content=...
+                                                    xStart = p0;
+                                                    xEnd = p1;
+                                                    yStart = p2;
+                                                    yEnd = p3;
+                                                } else {
+                                                    // yStart=yEnd=xStart=xEnd=Type=Direction=Content=... (K, S, D vb.)
+                                                    yStart = p0;
+                                                    yEnd = p1;
+                                                    xStart = p2;
+                                                    xEnd = p3;
+                                                }
+
+                                                direction = parts[5];
+                                                content = parts[6];
+                                            }
+                                            // Format 2: 4-6 parametreli
+                                            else if (parts.length >= 4) {
+                                                xStart = parseInt(parts[0], 10);
+                                                xEnd = parseInt(parts[1], 10);
+
+                                                let dirIndex = parts.findIndex(p => p === 'D' || p === 'Y');
+
+                                                if (dirIndex === 2) {
+                                                    direction = parts[2];
+                                                    yStart = parseInt(parts[3], 10);
+                                                    yEnd = parts.length > 4 ? parseInt(parts[4], 10) : yStart;
+                                                    content = parts.length > 5 ? parts[5] : '';
+                                                } else if (dirIndex === 4) {
+                                                    yStart = parseInt(parts[2], 10);
+                                                    yEnd = parseInt(parts[3], 10);
+                                                    direction = parts[4];
+                                                    content = parts.length > 5 ? parts[5] : '';
+                                                } else {
+                                                    return;
+                                                }
+                                            } else {
+                                                return;
+                                            }
+
+                                            if (isNaN(xStart) || isNaN(xEnd) || isNaN(yStart) || isNaN(yEnd)) return;
+                                            if (!direction || (direction !== 'D' && direction !== 'Y')) return;
+                                            if (!content) content = '';
+
+                                            // Label ekle (varsa)
+                                            if (label) {
+                                                const labelX = xStart * 10 - 5;
+                                                const labelY = yStart * 10 - 3;
+                                                labels.push(
+                                                    <text
+                                                        key={`label-${lineIdx}`}
+                                                        x={labelX}
+                                                        y={labelY}
+                                                        fontSize="8"
+                                                        fill="#3b82f6"
+                                                        fontWeight="600"
+                                                        fontFamily="Arial, sans-serif"
+                                                    >
+                                                        {label}
+                                                    </text>
+                                                );
+                                            }
+
+                                            // Noktaları oluştur
+                                            if (direction === 'D') {
+                                                // Dikey
+                                                for (let x = xStart; x <= xEnd && x <= gridWidth; x++) {
+                                                    for (let y = yStart; y <= yEnd && y <= gridHeight; y++) {
+                                                        const charIdx = y - yStart;
+                                                        if (content.length === 0 || charIdx < content.length) {
+                                                            dots.push(
+                                                                <circle
+                                                                    key={`dot-${lineIdx}-${x}-${y}`}
+                                                                    cx={x * 10 + 5}
+                                                                    cy={y * 10 + 5}
+                                                                    r="3"
+                                                                    fill="#1e293b"
+                                                                />
+                                                            );
+                                                        }
+                                                    }
+                                                }
+                                            } else if (direction === 'Y') {
+                                                // Yatay
+                                                for (let y = yStart; y <= yEnd && y <= gridHeight; y++) {
+                                                    for (let x = xStart; x <= xEnd && x <= gridWidth; x++) {
+                                                        const charIdx = x - xStart;
+                                                        if (content.length === 0 || charIdx < content.length) {
+                                                            dots.push(
+                                                                <circle
+                                                                    key={`dot-${lineIdx}-${x}-${y}`}
+                                                                    cx={x * 10 + 5}
+                                                                    cy={y * 10 + 5}
+                                                                    r="3"
+                                                                    fill="#1e293b"
+                                                                />
+                                                            );
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        });
+
+                                        return [...labels, ...dots];
+                                    })()}
+                                    {/* Sınır kutusu */}
+                                    <rect
+                                        x="0" y="0"
+                                        width={(gridWidth + 1) * 10} height={(gridHeight + 1) * 10}
+                                        fill="none"
+                                        stroke="#3b82f6"
+                                        strokeWidth="2"
+                                    />
+                                </svg>
+                            ) : (
+                                <div style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    height: '300px',
+                                    color: '#64748b',
+                                    textAlign: 'center'
+                                }}>
+                                    <span style={{ fontSize: '3rem', marginBottom: '10px' }}>🎨</span>
+                                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#1e293b' }}>Görsel Ön İzleme</p>
+                                    <p style={{ margin: '5px 0 0 0', fontSize: '0.75rem' }}>Önce FMT dosyası yükleyin</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                 </div>
             )}
 
@@ -1337,7 +1757,6 @@ export default function OpticalTab({ data, setData, attendanceData, onNext }) {
             margin-bottom: 20px;
             border: 1px solid rgba(99, 102, 241, 0.15);
             box-shadow: var(--glass-shadow);
-            max-width: 700px;
         }
         
         .settings-header {
@@ -1406,11 +1825,12 @@ export default function OpticalTab({ data, setData, attendanceData, onNext }) {
             border-radius: 8px;
             overflow: hidden;
             border: 1px solid rgba(0, 0, 0, 0.08);
+            max-width: 450px;
         }
         
         .settings-table-header {
             display: grid;
-            grid-template-columns: 120px 100px 100px 120px 40px;
+            grid-template-columns: 110px 90px 100px 40px;
             gap: 8px;
             padding: 8px 12px;
             background: rgba(99, 102, 241, 0.08);
@@ -1423,7 +1843,7 @@ export default function OpticalTab({ data, setData, attendanceData, onNext }) {
         
         .settings-table-row {
             display: grid;
-            grid-template-columns: 120px 100px 100px 120px 40px;
+            grid-template-columns: 110px 90px 100px 40px;
             gap: 8px;
             padding: 6px 12px;
             align-items: center;
@@ -1456,7 +1876,7 @@ export default function OpticalTab({ data, setData, attendanceData, onNext }) {
             color: var(--text-primary);
         }
         
-        .col-start, .col-length, .col-charset {
+        .col-start, .col-length {
             position: relative;
         }
         

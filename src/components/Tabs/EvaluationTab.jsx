@@ -154,7 +154,7 @@ export default function EvaluationTab({ attendanceData, opticalData, answerKeyDa
             total: filteredResults.length,
             entered: entered,
             passed: passed,
-            successRate: entered > 0 ? ((passed / entered) * 100).toFixed(2) : '0.00',
+            successRate: filteredResults.length > 0 ? ((passed / filteredResults.length) * 100).toFixed(2) : '0.00',
             avgScore: (filteredResults.filter(r => r.Durum === 'Girdi').reduce((acc, r) => acc + parseFloat(r.Puan || 0), 0) / (entered || 1)).toFixed(2)
         };
     }, [filteredResults]);
