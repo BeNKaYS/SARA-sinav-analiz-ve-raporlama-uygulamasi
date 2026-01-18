@@ -59,7 +59,9 @@
       "language": "1055",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Optik Değerlendirme"
+      "shortcutName": "Optik Değerlendirme",
+      "installerIcon": "public/icon.ico",
+      "uninstallerIcon": "public/icon.ico"
     },
     "portable": {
       "artifactName": "${productName}-Portable-${version}.${ext}"
