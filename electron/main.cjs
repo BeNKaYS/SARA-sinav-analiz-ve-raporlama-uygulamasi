@@ -25,7 +25,7 @@ const getIconPath = () => {
 
 // Uygulama bilgileri
 const APP_NAME = 'Optik Değerlendirme';
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 const APP_AUTHOR = 'Sercan ÖZDEMİR';
 
 // Türkçe Menü Şablonu
