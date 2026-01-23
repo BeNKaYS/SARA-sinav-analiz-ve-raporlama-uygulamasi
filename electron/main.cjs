@@ -506,6 +506,7 @@ const getExams = () => {
                     hasOptical: exam.hasOptical ?? !!(exam.data?.opticalData?.length > 0),
                     hasAnswerKey: exam.hasAnswerKey ?? !!(exam.data?.answerKeyData && Object.keys(exam.data.answerKeyData).length > 0),
                     hasResults: exam.hasResults ?? !!(exam.data?.results?.length > 0),
+                    settings: exam.data?.settings || {},
                     fileName: file
                 });
             } catch (e) {

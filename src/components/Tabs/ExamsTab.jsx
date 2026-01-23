@@ -332,6 +332,12 @@ export default function ExamsTab({
                                             </td>
                                             <td>
                                                 <div className="data-badges">
+                                                    {/* Ayar Özeti Etiketi */}
+                                                    {exam.settings && (
+                                                        <span className="badge badge-settings" title="Soru Sayısı | Puanlama | Geçer Not | Yuvarlama">
+                                                            {`${exam.settings.questionCount || 0}${exam.settings.scoringType === 'correct' ? 'D' : 'N'}${exam.settings.passGrade || 0}${exam.settings.roundScores ? 'Y' : ''}`}
+                                                        </span>
+                                                    )}
                                                     {hasAtt && <span className="badge badge-blue">Yoklama</span>}
                                                     {hasOpt && <span className="badge badge-green">Optik</span>}
                                                     {hasKey && <span className="badge badge-purple">Anahtar</span>}
@@ -706,6 +712,14 @@ export default function ExamsTab({
                     background: rgba(245, 158, 11, 0.25);
                     color: #fbbf24;
                     border: 1px solid rgba(245, 158, 11, 0.3);
+                }
+
+                .badge-settings {
+                    background: rgba(148, 163, 184, 0.2);
+                    color: #e2e8f0;
+                    border: 1px solid rgba(148, 163, 184, 0.4);
+                    font-family: 'Courier New', Courier, monospace;
+                    font-weight: 700;
                 }
 
                 .action-btn {
