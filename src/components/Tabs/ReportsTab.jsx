@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { saveExcel } from '../../utils/excelHelper';
 import PrintPreview from '../PrintPreview';
 
-export default function ReportsTab({ results, examName, answerKey }) {
+export default function ReportsTab({ results, examName, answerKey, examSettings }) {
     const [exporting, setExporting] = useState(false);
     const [showPrintPreview, setShowPrintPreview] = useState(false);
     const [printReportType, setPrintReportType] = useState('salonList');
@@ -108,6 +108,7 @@ export default function ReportsTab({ results, examName, answerKey }) {
                 onClose={() => setShowPrintPreview(false)}
                 reportType={printReportType}
                 answerKey={answerKey}
+                examSettings={examSettings}
             />
         );
     }

@@ -8,32 +8,162 @@
 import { useState, useRef, useEffect } from 'react';
 import './PrintPreview.css';
 
-export default function PrintPreview({ data, onClose, reportType = 'salonList', answerKey = null }) {
+
+
+// Sayıyı yazıya çeviren yardımcı fonksiyon
+const numberToTurkishWords = (num) => {
+    if (num === null || num === undefined || isNaN(num)) return '';
+
+    // String'e çevir ve virgül/nokta kontrolü
+    let numStr = String(num).replace(',', '.');
+    let [integerPart, decimalPart] = numStr.split('.');
+
+    integerPart = parseInt(integerPart, 10);
+
+    if (integerPart === 0 && !decimalPart) return 'Sıfır';
+
+    const ones = ['', 'Bir', 'İki', 'Üç', 'Dört', 'Beş', 'Altı', 'Yedi', 'Sekiz', 'Dokuz'];
+    const tens = ['', 'On', 'Yirmi', 'Otuz', 'Kırk', 'Elli', 'Altmış', 'Yetmiş', 'Seksen', 'Doksan'];
+    const groups = ['', 'Bin', 'Milyon'];
+
+    const convertGroup = (n) => {
+        let str = '';
+        const h = Math.floor(n / 100);
+        const t = Math.floor((n % 100) / 10);
+        const o = n % 10;
+
+        if (h === 1) str += 'Yüz ';
+        else if (h > 1) str += ones[h] + ' Yüz ';
+
+        if (t > 0) str += tens[t] + ' ';
+        if (o > 0) str += ones[o] + ' ';
+
+        return str.trim();
+    };
+
+    let words = '';
+
+    // Tam sayı kısmı
+    if (integerPart === 0) words = 'Sıfır';
+    else {
+        let groupIndex = 0;
+        let tempNum = integerPart;
+
+        while (tempNum > 0) {
+            const groupVal = tempNum % 1000;
+            if (groupVal > 0) {
+                let groupStr = convertGroup(groupVal);
+                // "Bir Bin" durumu düzeltmesi
+                if (groupIndex === 1 && groupVal === 1) groupStr = '';
+
+                words = groupStr + (groups[groupIndex] ? ' ' + groups[groupIndex] : '') + ' ' + words;
+            }
+            tempNum = Math.floor(tempNum / 1000);
+            groupIndex++;
+        }
+    }
+
+    // Ondalık Kısım
+    if (decimalPart) {
+        // Sadece ilk 2 haneyi alalım
+        let decimalVal = parseInt(decimalPart.substring(0, 2).padEnd(2, '0'));
+        if (decimalVal > 0) {
+            words = words.trim() + ' Virgül ' + convertGroup(decimalVal);
+        }
+    }
+
+    return words.trim();
+};
+
+const COLUMN_DEFS = [
+    { key: 'sira', label: 'Sıra', style: { width: '1%', whiteSpace: 'nowrap' } },
+    { key: 'tc', label: 'TC No', style: { width: '1%', whiteSpace: 'nowrap' } },
+    { key: 'adSoyad', label: 'Ad Soyad', style: { width: 'auto' } },
+    { key: 'belgeTuru', label: 'Belge Türü', style: { width: '1%', whiteSpace: 'nowrap', textAlign: 'center' } },
+    { key: 'durum', label: 'Durum', style: { width: '1%', whiteSpace: 'nowrap', textAlign: 'center' } },
+    { key: 'kitapcik', label: 'Kitapçık', style: { width: '1%', textAlign: 'center' } },
+    { key: 'dogru', label: 'Doğru', style: { width: '1%', textAlign: 'center' } },
+    { key: 'yanlis', label: 'Yanlış', style: { width: '1%', textAlign: 'center' } },
+    { key: 'bos', label: 'Boş', style: { width: '1%', textAlign: 'center' } },
+    { key: 'puan', label: 'Puan', style: { width: '1%', textAlign: 'center', fontWeight: 'bold' } },
+    { key: 'puanYazi', label: 'Puan (Yazıyla)', style: { width: 'auto' } },
+
+    { key: 'net', label: 'Net', style: { width: '1%', whiteSpace: 'nowrap', textAlign: 'center' } },
+    { key: 'sonuc', label: 'Sonuç', style: { width: '1%', whiteSpace: 'nowrap', textAlign: 'center' } }
+];
+
+export default function PrintPreview({ data, onClose, reportType = 'salonList', answerKey = null, examSettings = {} }) {
     const printRef = useRef();
     const [logoBase64, setLogoBase64] = useState('');
-    const [cheatingThreshold, setCheatingThreshold] = useState(90);
     const [cheatingAnalysis, setCheatingAnalysis] = useState([]);
 
-    // Özelleştirme ayarları
-    const [showLogo, setShowLogo] = useState(true);
-    const [showSubtitle, setShowSubtitle] = useState(true);
-    const [subtitle, setSubtitle] = useState('');
+    // Varsayılan ayarlar
+    const DEFAULT_SETTINGS = {
+        showLogo: true,
+        showSubtitle: true,
+        subtitle: '',
+        maskTCEnabled: true,
+        reportTitle: '',
+        signature1: 'Şube Müdürü',
+        signature2: 'Başkan',
+        signature3: 'Üye',
+        fontSize: 7,
+        pageOrientation: 'portrait',
+        pageScale: 100,
+        // roundScores removed
+        cheatingThreshold: 90,
+        visibleColumns: {
+            sira: true, tc: true, adSoyad: true, belgeTuru: true,
+            durum: true, kitapcik: true, dogru: true, yanlis: true,
+            bos: true, puan: true, puanYazi: false, sonuc: true,
+            net: false
+        }
+    };
 
-    // TC Maskeleme
-    const [maskTCEnabled, setMaskTCEnabled] = useState(true);
+    // Ayarları yükle/kaydet
+    const [settings, setSettings] = useState(() => {
+        const saved = localStorage.getItem(`printSettings_${reportType}`);
+        return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
+    });
 
-    // Rapor Başlığı
-    const [reportTitle, setReportTitle] = useState('');
+    // Rapor türü değişince ayarları yükle
+    useEffect(() => {
+        const saved = localStorage.getItem(`printSettings_${reportType}`);
+        let newSettings = saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
 
-    // İmza Etiketleri
-    const [signature1, setSignature1] = useState('Şube Müdürü');
-    const [signature2, setSignature2] = useState('Başkan');
-    const [signature3, setSignature3] = useState('Üye');
+        // Sınav ayarlarına göre Net sütununu otomatik aç/kapa
+        if (examSettings) {
+            const { scoringType, wrongRatio } = examSettings;
+            // Eğer previous session'da kaydedilmiş bir ayar yoksa veya force etmek istersek:
+            // Burada 'net' sütununu otomatik true yapıyoruz eğer scoringType net ise.
+            // Kullanıcı manuel kapattıysa saygı duymak isteyebiliriz ama
+            // "ayarların raporlar üzerinde etkisi olsun" dendiği için override ediyoruz.
+            const shouldShowNet = scoringType === 'net' || (wrongRatio && Number(wrongRatio) > 0);
+            if (shouldShowNet) {
+                newSettings.visibleColumns = {
+                    ...newSettings.visibleColumns,
+                    net: true
+                };
+            }
+        }
+        setSettings(newSettings);
+    }, [reportType, examSettings]);
 
-    // Sayfa Ayarları
-    const [fontSize, setFontSize] = useState(7); // 5-10 pt
-    const [pageOrientation, setPageOrientation] = useState('portrait'); // portrait, landscape
-    const [pageScale, setPageScale] = useState(100); // 50-150
+    // Ayar güncelleme fonksiyonu
+    const updateSetting = (key, value) => {
+        setSettings(prev => {
+            const next = { ...prev, [key]: value };
+            localStorage.setItem(`printSettings_${reportType}`, JSON.stringify(next));
+            return next;
+        });
+    };
+
+    // State'leri ayrıştır (Geriye uyumluluk ve kolay kullanım için)
+    const {
+        showLogo, showSubtitle, subtitle, maskTCEnabled, reportTitle,
+        signature1, signature2, signature3, fontSize, pageOrientation,
+        pageScale, cheatingThreshold, visibleColumns
+    } = settings;
 
     // Modal açıldığında body scroll'u kilitle
     useEffect(() => {
@@ -189,20 +319,20 @@ export default function PrintPreview({ data, onClose, reportType = 'salonList', 
         .salon-badge{background:#007bff !important;color:#fff !important;padding:3px 10px;border-radius:4px;font-weight:600;font-size:10px;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
         .print-table{width:100%;border-collapse:collapse;margin:8px 0}
         .print-table thead{background:#e0e0e0 !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
-        .print-table th{border:1px solid #333;padding:3px 2px;text-align:center;font-weight:700;font-size:7pt;background:#e0e0e0 !important}
-        .print-table td{border:1px solid #666;padding:2px 3px;font-size:7pt}
+        .print-table th{border:1px solid #333;padding:3px 2px;text-align:center;font-weight:700;font-size:${fontSize}pt;background:#e0e0e0 !important}
+        .print-table td{border:1px solid #666;padding:2px 3px;font-size:${fontSize}pt}
         .print-table td:nth-child(1),.print-table td:nth-child(6),.print-table td:nth-child(7),.print-table td:nth-child(8),.print-table td:nth-child(9),.print-table td:nth-child(10),.print-table td:nth-child(11),.print-table td:nth-child(12){text-align:center}
         .print-table tr.failure{background-color:#ffcccc !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
         .print-table tr.failure td{background-color:#ffcccc !important}
         .print-table tr.exempt{background-color:#fff4e5 !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
         .print-table tr.exempt td{background-color:#fff4e5 !important}
-        .print-footer{margin-top:10px;font-size:7pt}
+        .print-footer{margin-top:10px;font-size:${Math.max(7, fontSize - 2)}pt}
         .footer-note{font-style:italic;margin-bottom:5px;color:#555}
-        .footer-stats{margin:5px 0;color:#333;font-size:7pt}
+        .footer-stats{margin:5px 0;color:#333;font-size:${Math.max(7, fontSize - 1)}pt}
         .signatures{display:flex;justify-content:space-around;margin-top:15px;padding-top:10px}
         .signature-box{text-align:center;min-width:120px}
         .signature-line{border-top:1px solid #333;margin-bottom:5px;width:150px;margin-left:auto;margin-right:auto}
-        .signature-label{font-weight:600;font-size:8pt}
+        .signature-label{font-weight:600;font-size:${Math.max(8, fontSize)}pt}
         .student-info-box{border:2px solid #333;padding:15px;margin:15px 0;border-radius:8px;background:#f9f9f9 !important}
         .info-row{display:flex;margin-bottom:10px;font-size:11pt}
         .info-row .label{font-weight:700;width:100px;color:#333}
@@ -231,7 +361,7 @@ export default function PrintPreview({ data, onClose, reportType = 'salonList', 
         .score-info{display:flex;justify-content:space-around;padding:15px;background:#f9f9f9 !important;border-radius:8px;font-size:11pt}
         .no-cheating{text-align:center;padding:40px}
         .cheating-summary{margin:15px 0;padding:10px;background:#fff3cd !important;border-radius:6px;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
-        .cheating-table td{font-size:8pt}
+        .cheating-table td{font-size:${fontSize}pt}
         .similarity-cell{color:#dc3545 !important;font-weight:700}
         .correct-cell{color:#28a745 !important}
         .wrong-cell{color:#dc3545 !important}
@@ -341,12 +471,12 @@ export default function PrintPreview({ data, onClose, reportType = 'salonList', 
 
     // Öğrenci sayısına göre dinamik stil hesapla - fontSize ayarını da dahil et
     const getTableStyle = (studentCount) => {
-        // fontSize artık doğrudan pt değeri (5-10)
+        // fontSize artık doğrudan pt değeri (4-30)
         return { fontSize: `${fontSize}pt` };
     };
 
     const getCellPadding = (studentCount) => {
-        // Font boyutuna göre padding ayarla (fontSize 5-10 arası)
+        // Font boyutuna göre padding ayarla
         const paddingMultiplier = fontSize / 7; // 7pt normal kabul edilir
 
         let basePadding;
@@ -388,6 +518,30 @@ export default function PrintPreview({ data, onClose, reportType = 'salonList', 
         return reportTitle.trim() || defaultTitle;
     };
 
+    // Sınav Kuralları Bilgisi
+    const getExamRulesText = () => {
+        if (!examSettings) return '';
+        const parts = [];
+        if (Number(examSettings.wrongRatio) > 0) {
+            parts.push(`${examSettings.wrongRatio} Yanlış 1 Doğruyu Götürür`);
+        }
+        if (examSettings.scoringType === 'net') {
+            parts.push('Puanlama: Net Üzerinden');
+        } else {
+            // Varsayılan doğru sayısı ise yazmaya gerek yok veya istenirse:
+            // parts.push('Puanlama: Doğru Sayısı');
+        }
+
+        if (parts.length === 0) return '';
+        return `(${parts.join(' | ')})`;
+    };
+
+    // Puanı ayarlara göre getir
+    const getDisplayScore = (score) => {
+        if (score === null || score === undefined) return 0;
+        return score;
+    };
+
     // Salon listesi formatı - Her salon ayrı sayfada
     const renderSalonList = () => {
         return salons.map(salon => {
@@ -405,6 +559,9 @@ export default function PrintPreview({ data, onClose, reportType = 'salonList', 
                         <h2>T.C. MİLLİ EĞİTİM BAKANLIĞI</h2>
                         {showSubtitle && subtitle && <h3 className="print-subtitle">{subtitle}</h3>}
                         <h1>{getReportTitle('SINAV SONUÇ LİSTESİ')}</h1>
+                        <div className="print-rules" style={{ marginBottom: '5px', fontSize: '10px', fontStyle: 'italic' }}>
+                            {getExamRulesText()}
+                        </div>
                         <div className="print-info">
                             <span>Tarih: {new Date().toLocaleDateString('tr-TR')}</span>
                             <span className="salon-badge">Salon: {salon}</span>
@@ -414,18 +571,11 @@ export default function PrintPreview({ data, onClose, reportType = 'salonList', 
                     <table className="print-table" style={tableStyle}>
                         <thead>
                             <tr>
-                                <th style={thStyle}>Sıra</th>
-                                <th style={thStyle}>TC No</th>
-                                <th style={thStyle}>Ad Soyad</th>
-                                <th style={thStyle}>Belge Türü</th>
-                                <th style={thStyle}>Durum</th>
-                                <th style={thStyle}>Kitapçık</th>
-                                <th style={thStyle}>Doğru</th>
-                                <th style={thStyle}>Yanlış</th>
-                                <th style={thStyle}>Boş</th>
-                                <th style={thStyle}>Net</th>
-                                <th style={thStyle}>Puan</th>
-                                <th style={thStyle}>Sonuç</th>
+                                {COLUMN_DEFS.map(col => (
+                                    visibleColumns[col.key] && (
+                                        <th key={col.key} style={{ ...thStyle, ...col.style }}>{col.label}</th>
+                                    )
+                                ))}
                             </tr>
                         </thead>
                         <tbody>
@@ -437,18 +587,19 @@ export default function PrintPreview({ data, onClose, reportType = 'salonList', 
 
                                 return (
                                     <tr key={idx} className={isFailure ? 'failure' : isExempt ? 'exempt' : ''}>
-                                        <td style={tdStyle}>{idx + 1}</td>
-                                        <td style={tdStyle}>{formatTC(student['TC Kimlik'])}</td>
-                                        <td style={tdStyle}>{student['Ad Soyad']}</td>
-                                        <td style={tdStyle}>{student['Belge Türü']}</td>
-                                        <td style={tdStyle}>{student.Durum}</td>
-                                        <td style={tdStyle}>{student.Kitapçık || '-'}</td>
-                                        <td style={tdStyle}>{student.Doğru}</td>
-                                        <td style={tdStyle}>{student.Yanlış}</td>
-                                        <td style={tdStyle}>{student.Boş}</td>
-                                        <td style={tdStyle}>{net.toFixed(2)}</td>
-                                        <td style={tdStyle}>{student.Puan}</td>
-                                        <td style={tdStyle}>{student.Sonuç}</td>
+                                        {visibleColumns.sira && <td style={tdStyle}>{idx + 1}</td>}
+                                        {visibleColumns.tc && <td style={tdStyle}>{formatTC(student['TC Kimlik'])}</td>}
+                                        {visibleColumns.adSoyad && <td style={tdStyle}>{student['Ad Soyad']}</td>}
+                                        {visibleColumns.belgeTuru && <td style={tdStyle}>{student['Belge Türü']}</td>}
+                                        {visibleColumns.durum && <td style={tdStyle}>{student.Durum}</td>}
+                                        {visibleColumns.kitapcik && <td style={tdStyle}>{student.Kitapçık || '-'}</td>}
+                                        {visibleColumns.dogru && <td style={tdStyle}>{student.Doğru}</td>}
+                                        {visibleColumns.yanlis && <td style={tdStyle}>{student.Yanlış}</td>}
+                                        {visibleColumns.bos && <td style={tdStyle}>{student.Boş}</td>}
+                                        {visibleColumns.puan && <td style={tdStyle}>{getDisplayScore(student.Puan)}</td>}
+                                        {visibleColumns.puanYazi && <td style={tdStyle}>{numberToTurkishWords(getDisplayScore(student.Puan))}</td>}
+                                        {visibleColumns.net && <td style={tdStyle}>{student.Net ?? (student.Doğru - (student.Yanlış * 0.25)).toFixed(2)}</td>}
+                                        {visibleColumns.sonuc && <td style={tdStyle}>{student.Sonuç}</td>}
                                     </tr>
                                 );
                             })}
@@ -535,7 +686,7 @@ export default function PrintPreview({ data, onClose, reportType = 'salonList', 
                     </div>
                     <div className="perf-item">
                         <div className="perf-label">Puan</div>
-                        <div className="perf-value score">{student.Puan}</div>
+                        <div className="perf-value score">{getDisplayScore(student.Puan)}</div>
                     </div>
                 </div>
 
@@ -544,6 +695,46 @@ export default function PrintPreview({ data, onClose, reportType = 'salonList', 
                         {student.Sonuç}
                     </div>
                 </div>
+
+                {/* Cevap Anahtarı ve Öğrenci Cevapları */}
+                {student.Cevaplar && Array.isArray(student.Cevaplar) && answerKey && (
+                    <div className="answer-key-section">
+                        <h3>📋 Cevap Karşılaştırması</h3>
+                        <div className="answers-grid">
+                            {student.Cevaplar.map((answer, qIdx) => {
+                                const questionNum = qIdx + 1;
+                                const booklet = student.Kitapçık || student['Kitapçık'];
+                                const docType = student['Belge Türü'];
+                                const correctAnswer = answerKey?.[booklet]?.[docType]?.[questionNum] ||
+                                    answerKey?.[booklet]?.['GENEL']?.[questionNum] || '-';
+
+                                const isCorrect = answer && answer === correctAnswer;
+                                const isWrong = answer && answer !== correctAnswer && correctAnswer !== '-';
+                                const isEmpty = !answer || answer === '';
+
+                                return (
+                                    <div
+                                        key={qIdx}
+                                        className={`answer-cell ${isCorrect ? 'correct' : isWrong ? 'wrong' : isEmpty ? 'empty' : ''}`}
+                                    >
+                                        <div className="question-num">{questionNum}</div>
+                                        <div className="answer-comparison">
+                                            <span className="student-answer">{answer || '-'}</span>
+                                            <span className="separator">/</span>
+                                            <span className="correct-answer">{correctAnswer}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="answer-legend">
+                            <span><span className="legend-box correct"></span> Doğru</span>
+                            <span><span className="legend-box wrong"></span> Yanlış</span>
+                            <span><span className="legend-box empty"></span> Boş</span>
+                            <span style={{ fontSize: '9pt', color: '#666' }}>Format: Öğrenci Cevabı / Doğru Cevap</span>
+                        </div>
+                    </div>
+                )}
 
                 <div className="print-footer">
                     <p className="footer-note">
@@ -754,20 +945,24 @@ export default function PrintPreview({ data, onClose, reportType = 'salonList', 
                     <div className="sidebar-section">
                         <h3>📋 Rapor Ayarları</h3>
 
-                        <label className="checkbox-item">
+                        {/* 1. Rapor Başlığı */}
+                        <div className="input-section">
+                            <label>📝 Rapor Başlığı</label>
                             <input
-                                type="checkbox"
-                                checked={showLogo}
-                                onChange={(e) => setShowLogo(e.target.checked)}
+                                type="text"
+                                className="subtitle-input"
+                                placeholder="Özel başlık (boş bırakılırsa varsayılan)"
+                                value={reportTitle}
+                                onChange={(e) => updateSetting('reportTitle', e.target.value)}
                             />
-                            <span>Logo Göster</span>
-                        </label>
+                        </div>
 
+                        {/* 2. Alt Başlık Göster */}
                         <label className="checkbox-item">
                             <input
                                 type="checkbox"
                                 checked={showSubtitle}
-                                onChange={(e) => setShowSubtitle(e.target.checked)}
+                                onChange={(e) => updateSetting('showSubtitle', e.target.checked)}
                             />
                             <span>Alt Başlık Göster</span>
                         </label>
@@ -778,29 +973,51 @@ export default function PrintPreview({ data, onClose, reportType = 'salonList', 
                                 className="subtitle-input"
                                 placeholder="Kurum adı veya başlık..."
                                 value={subtitle}
-                                onChange={(e) => setSubtitle(e.target.value)}
+                                onChange={(e) => updateSetting('subtitle', e.target.value)}
                             />
                         )}
 
+                        {/* 3. Logo Göster */}
+                        <label className="checkbox-item">
+                            <input
+                                type="checkbox"
+                                checked={showLogo}
+                                onChange={(e) => updateSetting('showLogo', e.target.checked)}
+                            />
+                            <span>Logo Göster</span>
+                        </label>
+
+                        {/* 4. TC Kimlik Maskele */}
                         <label className="checkbox-item">
                             <input
                                 type="checkbox"
                                 checked={maskTCEnabled}
-                                onChange={(e) => setMaskTCEnabled(e.target.checked)}
+                                onChange={(e) => updateSetting('maskTCEnabled', e.target.checked)}
                             />
                             <span>TC Kimlik Maskele</span>
                         </label>
 
-                        <div className="input-section">
-                            <label>📝 Rapor Başlığı</label>
-                            <input
-                                type="text"
-                                className="subtitle-input"
-                                placeholder="Özel başlık (boş bırakılırsa varsayılan)"
-                                value={reportTitle}
-                                onChange={(e) => setReportTitle(e.target.value)}
-                            />
-                        </div>
+                        {/* 5. Görünür Sütunlar */}
+                        {reportType === 'salonList' && (
+                            <div className="input-section">
+                                <label>Görünür Sütunlar</label>
+                                <div className="columns-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px', marginTop: '5px' }}>
+                                    {COLUMN_DEFS.map(col => (
+                                        <label key={col.key} className="checkbox-item" style={{ fontSize: '11px' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={visibleColumns[col.key]}
+                                                onChange={(e) => updateSetting('visibleColumns', {
+                                                    ...visibleColumns,
+                                                    [col.key]: e.target.checked
+                                                })}
+                                            />
+                                            <span>{col.label}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {reportType === 'cheating' && (
                             <div className="threshold-section">
@@ -811,7 +1028,7 @@ export default function PrintPreview({ data, onClose, reportType = 'salonList', 
                                     min="50"
                                     max="100"
                                     value={cheatingThreshold}
-                                    onChange={(e) => setCheatingThreshold(Number(e.target.value))}
+                                    onChange={(e) => updateSetting('cheatingThreshold', Number(e.target.value))}
                                 />
                                 <small>{cheatingAnalysis.length} şüpheli eşleşme</small>
                             </div>
@@ -827,73 +1044,83 @@ export default function PrintPreview({ data, onClose, reportType = 'salonList', 
                                 className="signature-input"
                                 placeholder="İmza 1"
                                 value={signature1}
-                                onChange={(e) => setSignature1(e.target.value)}
+                                onChange={(e) => updateSetting('signature1', e.target.value)}
                             />
                             <input
                                 type="text"
                                 className="signature-input"
                                 placeholder="İmza 2"
                                 value={signature2}
-                                onChange={(e) => setSignature2(e.target.value)}
+                                onChange={(e) => updateSetting('signature2', e.target.value)}
                             />
                             <input
                                 type="text"
                                 className="signature-input"
                                 placeholder="İmza 3"
                                 value={signature3}
-                                onChange={(e) => setSignature3(e.target.value)}
+                                onChange={(e) => updateSetting('signature3', e.target.value)}
                             />
                         </div>
                     </div>
 
                     {/* Sayfa Ayarları */}
-                    <div className="sidebar-section">
-                        <h3>📐 Sayfa Ayarları</h3>
+                    {reportType === 'salonList' && (
+                        <div className="sidebar-section">
+                            <h3>📐 Sayfa Ayarları</h3>
 
-                        <div className="setting-row">
-                            <label>Yazı Boyutu</label>
-                            <div className="scale-container">
-                                <input
-                                    type="range"
-                                    className="scale-slider"
-                                    min="5"
-                                    max="15"
-                                    step="0.5"
-                                    value={fontSize}
-                                    onChange={(e) => setFontSize(Number(e.target.value))}
-                                />
-                                <span className="scale-value">{fontSize}pt</span>
+                            <div className="setting-row">
+                                <label>Yazı Boyutu</label>
+                                <div className="scale-container">
+                                    <button
+                                        className="scale-btn"
+                                        onClick={() => updateSetting('fontSize', Math.max(4, Number((fontSize - 0.1).toFixed(1))))}
+                                    >-</button>
+                                    <input
+                                        type="range"
+                                        className="scale-slider"
+                                        min="4"
+                                        max="15"
+                                        step="0.1"
+                                        value={fontSize}
+                                        onChange={(e) => updateSetting('fontSize', Number(e.target.value))}
+                                    />
+                                    <button
+                                        className="scale-btn"
+                                        onClick={() => updateSetting('fontSize', Math.min(15, Number((fontSize + 0.1).toFixed(1))))}
+                                    >+</button>
+                                    <span className="scale-value" style={{ minWidth: '40px' }}>{fontSize}pt</span>
+                                </div>
+                            </div>
+
+                            <div className="setting-row">
+                                <label>Sayfa Yönü</label>
+                                <select
+                                    className="setting-select"
+                                    value={pageOrientation}
+                                    onChange={(e) => updateSetting('pageOrientation', e.target.value)}
+                                >
+                                    <option value="portrait">📄 Dikey</option>
+                                    <option value="landscape">📃 Yatay</option>
+                                </select>
+                            </div>
+
+                            <div className="setting-row">
+                                <label>Ölçek</label>
+                                <div className="scale-container">
+                                    <input
+                                        type="range"
+                                        className="scale-slider"
+                                        min="50"
+                                        max="150"
+                                        step="10"
+                                        value={pageScale}
+                                        onChange={(e) => updateSetting('pageScale', Number(e.target.value))}
+                                    />
+                                    <span className="scale-value">%{pageScale}</span>
+                                </div>
                             </div>
                         </div>
-
-                        <div className="setting-row">
-                            <label>Sayfa Yönü</label>
-                            <select
-                                className="setting-select"
-                                value={pageOrientation}
-                                onChange={(e) => setPageOrientation(e.target.value)}
-                            >
-                                <option value="portrait">📄 Dikey</option>
-                                <option value="landscape">📃 Yatay</option>
-                            </select>
-                        </div>
-
-                        <div className="setting-row">
-                            <label>Ölçek</label>
-                            <div className="scale-container">
-                                <input
-                                    type="range"
-                                    className="scale-slider"
-                                    min="50"
-                                    max="150"
-                                    step="10"
-                                    value={pageScale}
-                                    onChange={(e) => setPageScale(Number(e.target.value))}
-                                />
-                                <span className="scale-value">%{pageScale}</span>
-                            </div>
-                        </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* Sağ Panel - Önizleme */}

@@ -12,7 +12,7 @@ import { saveExcel } from '../../utils/excelHelper';
 // ==========================================
 //  BİLEŞEN TANIMI
 // ==========================================
-export default function EvaluationTab({ attendanceData, opticalData, answerKeyData, results, setResults, onSave }) {
+export default function EvaluationTab({ attendanceData, opticalData, answerKeyData, results, setResults, onSave, examSettings }) {
 
     // -------------------------------------------------------------------------
     //  STATE YÖNETİMİ
@@ -39,7 +39,7 @@ export default function EvaluationTab({ attendanceData, opticalData, answerKeyDa
         setMsg(null);
         setTimeout(() => {
             try {
-                const res = evaluateExam(attendanceData, opticalData, answerKeyData);
+                const res = evaluateExam(attendanceData, opticalData, answerKeyData, examSettings);
                 setResults(res);
                 setMsg({ type: 'success', text: `Değerlendirme tamamlandı. ${res.length} öğrenci hesaplandı.` });
 

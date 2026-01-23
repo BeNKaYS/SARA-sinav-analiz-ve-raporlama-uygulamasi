@@ -11,11 +11,20 @@
  * @param {Array} attendanceList - Excel'den okunan yoklama listesi (JSON array)
  * @param {Array} opticalList - TXT'den okunan ve parse edilen optik veri listesi
  * @param {Object} answerKeyData - Kitapçık ve Belge türüne göre cevap anahtarları
+ * @param {Object} settings - Sınav ayarları (questionCount, scoringType, wrongRatio, roundScores)
  * 
  * @returns {Array} - Değerlendirilmiş öğrenci sonuç listesi
  * @throws {Error} - Kritik veri eksikse hata fırlatır
  */
-export const evaluateExam = (attendanceList, opticalList, answerKeyData) => {
+export const evaluateExam = (attendanceList, opticalList, answerKeyData, settings = {}) => {
+    // Varsayılan ayarlar (Eski usül: 40 soru, her soru 2.5 puan)
+    const {
+        questionCount = 40,
+        scoringType = 'correct',
+        wrongRatio = 0,
+        roundScores = false,
+        passGrade = 50
+    } = settings || {};
     // answerKeyData Yapısı: { "A": { "ÜDY3": { 1: "A"... } }, "B": ... }
 
     if (!answerKeyData || Object.keys(answerKeyData).length === 0) {
@@ -118,13 +127,33 @@ export const evaluateExam = (attendanceList, opticalList, answerKeyData) => {
                             }
                         });
 
-                        const score = (d * 2.5); // Her soru 2.5 puan
 
+                        // NET VE PUAN HESABI
+                        const wrongPenalty = wrongRatio > 0 ? (y / wrongRatio) : 0;
+                        const net = Math.max(0, d - wrongPenalty);
+
+                        let score = 0;
+                        if (scoringType === 'net') {
+                            score = (net / questionCount) * 100;
+                        } else {
+                            // Default: Doğru sayısı üzerinden
+                            score = (d / questionCount) * 100;
+                        }
+
+                        // Yuvarlama
+                        if (roundScores) {
+                            score = Math.round(score);
+                        }
+
+                        // Sonuçları ata
                         result['Doğru'] = d;
                         result['Yanlış'] = y;
                         result['Boş'] = b;
-                        result['Puan'] = score.toFixed(2);
-                        result['Sonuç'] = score >= 70 ? 'Başarılı' : 'Başarısız';
+                        result['Puan'] = roundScores ? score : score.toFixed(2);
+                        result['Net'] = net.toFixed(2); // Net bilgisini de arka planda tutalım
+                        result['Sonuç'] = score >= passGrade ? 'Başarılı' : 'Başarısız';
+                        // Cevapları array olarak kaydet (string ise split et)
+                        result['Cevaplar'] = typeof answers === 'string' ? answers.split('') : answers;
 
                     } else {
                         result['Durum'] = `Anahtar Yok (${docType})`;

@@ -4,7 +4,7 @@
   "description": "Sınav Değerlendirme Uygulaması",
   "author": "Sercan ÖZDEMİR <sercanozdemir@yandex.com>",
   "private": true,
-  "version": "1.6.0",
+  "version": "1.6.1",
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"npm run vite\" \"npm run electron\"",
@@ -45,9 +45,15 @@
           ]
         }
       ],
-      "icon": "public/icon.ico",
+      "icon": "build/icon.ico",
       "legalTrademarks": "Sercan ÖZDEMİR",
-      "signAndEditExecutable": false
+      "signAndEditExecutable": false,
+      "extraFiles": [
+        {
+          "from": "public/icon.ico",
+          "to": "."
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,

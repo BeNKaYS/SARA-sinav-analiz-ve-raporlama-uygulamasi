@@ -104,16 +104,16 @@
 .sidebar-section {
     margin-bottom: 20px;
     padding: 12px;
-    background: #333;
+    background: rgba(231, 231, 232, 0.9);
     border-radius: 8px;
 }
 
 .sidebar-section h3 {
-    color: #fff;
+    color: #1a1a1a;
     font-size: 13px;
     margin: 0 0 12px 0;
     padding-bottom: 8px;
-    border-bottom: 1px solid #444;
+    border-bottom: 1px solid #999;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -123,14 +123,14 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #ccc;
+    color: #333;
     padding: 6px 0;
     cursor: pointer;
     font-size: 12px;
 }
 
 .checkbox-item:hover {
-    color: #fff;
+    color: #000;
 }
 
 .checkbox-item input[type="checkbox"] {
@@ -169,7 +169,7 @@
 
 .input-section label {
     display: block;
-    color: #aaa;
+    color: #333;
     font-size: 11px;
     margin-bottom: 4px;
 }
@@ -212,7 +212,7 @@
 
 .setting-row label {
     display: block;
-    color: #aaa;
+    color: #333;
     font-size: 11px;
     margin-bottom: 5px;
 }
@@ -237,7 +237,28 @@
 .scale-container {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+}
+
+.scale-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid #555;
+    background: #444;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    transition: all 0.2s;
+}
+
+.scale-btn:hover {
+    background: #007bff;
+    border-color: #007bff;
 }
 
 .scale-slider {
@@ -333,8 +354,10 @@
 }
 
 .print-page {
-    width: 210mm; /* A4 width */
-    min-height: 297mm; /* A4 height - minimum */
+    width: 210mm;
+    /* A4 width */
+    min-height: 297mm;
+    /* A4 height - minimum */
     background: white;
     padding: 10mm 15mm;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -409,7 +432,6 @@
 .print-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 7pt;
     margin: 8px 0;
 }
 
@@ -422,14 +444,12 @@
     padding: 4px 2px;
     text-align: center;
     font-weight: 700;
-    font-size: 7pt;
 }
 
 .print-table td {
     border: 1px solid #666;
     padding: 3px 2px;
     text-align: left;
-    font-size: 6pt;
 }
 
 .print-table td:nth-child(1),
@@ -591,6 +611,125 @@
     border: 2px solid #dc3545;
 }
 
+/* Answer Key Section */
+.answer-key-section {
+    margin: 30px 0;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.answer-key-section h3 {
+    margin: 0 0 15px 0;
+    font-size: 14pt;
+    color: #333;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 8px;
+}
+
+.answers-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 6px;
+    margin-bottom: 15px;
+}
+
+.answer-cell {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 6px 4px;
+    text-align: center;
+    background: white;
+    font-size: 8pt;
+}
+
+.answer-cell.correct {
+    background: #4ade80;
+    border-color: #16a34a;
+    border-width: 2px;
+}
+
+.answer-cell.wrong {
+    background: #f87171;
+    border-color: #dc2626;
+    border-width: 2px;
+}
+
+.answer-cell.empty {
+    background: #fbbf24;
+    border-color: #f59e0b;
+    border-width: 2px;
+}
+
+.question-num {
+    font-size: 7pt;
+    color: #666;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.answer-comparison {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-weight: 700;
+    font-size: 9pt;
+}
+
+.student-answer {
+    color: #000;
+}
+
+.separator {
+    color: #999;
+    font-weight: 400;
+}
+
+.correct-answer {
+    color: #007bff;
+}
+
+.answer-legend {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    background: white;
+    border-radius: 4px;
+    font-size: 10pt;
+}
+
+.legend-box {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    border: 1px solid #999;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+.legend-box.correct {
+    background: #4ade80;
+    border-color: #16a34a;
+    border-width: 2px;
+}
+
+.legend-box.wrong {
+    background: #f87171;
+    border-color: #dc2626;
+    border-width: 2px;
+}
+
+.legend-box.empty {
+    background: #fbbf24;
+    border-color: #f59e0b;
+    border-width: 2px;
+}
+
 /* ==========================================
    SUMMARY REPORT
    ========================================== */
@@ -673,7 +812,7 @@
 
 .threshold-section label {
     display: block;
-    color: #ccc;
+    color: #333;
     font-size: 13px;
     margin-bottom: 8px;
 }
@@ -759,13 +898,14 @@
         size: A4 portrait;
         margin: 5mm;
     }
-    
+
     /* Tüm body içeriğini sıfırla */
     * {
         visibility: visible !important;
     }
-    
-    html, body {
+
+    html,
+    body {
         margin: 0 !important;
         padding: 0 !important;
         background: white !important;
@@ -846,7 +986,7 @@
         display: block !important;
         position: relative !important;
         overflow: visible !important;
-        
+
         /* Page break - kritik */
         page-break-after: always !important;
         page-break-inside: avoid !important;
@@ -893,18 +1033,18 @@
     .print-header h1 {
         font-size: 14px !important;
     }
-    
+
     .print-header h2,
     .print-header h3 {
         font-size: 10px !important;
     }
-    
+
     .print-footer,
     .footer-stats,
     .footer-note {
         font-size: 7pt !important;
     }
-    
+
     .signature-label {
         font-size: 7pt !important;
     }

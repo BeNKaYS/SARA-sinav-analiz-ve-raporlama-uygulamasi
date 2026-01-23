@@ -81,10 +81,14 @@ const MainApp = () => {
         timestamp: examOrName.timestamp
       });
     } else {
+      const name = typeof examOrName === 'object' ? examOrName.name : examOrName;
+      const settings = typeof examOrName === 'object' ? examOrName.settings : {};
+
       setExamInfo({
         id: Date.now().toString(),
-        name: examOrName,
-        timestamp: Date.now()
+        name: name,
+        timestamp: Date.now(),
+        data: { settings }
       });
     }
     setAttendanceData(null);
@@ -97,6 +101,18 @@ const MainApp = () => {
     localStorage.removeItem('attendance_file_name');
 
     setActiveTab('attendance');
+  };
+
+  const handleUpdateSettings = (newSettings) => {
+    if (!examInfo) return;
+    setExamInfo(prev => ({
+      ...prev,
+      data: {
+        ...prev.data,
+        settings: newSettings
+      }
+    }));
+    saveCurrentExam({ settings: newSettings });
   };
 
   const handleLoadExam = (exam) => {
@@ -129,6 +145,7 @@ const MainApp = () => {
       opticalData,
       answerKeyData,
       results,
+      settings: examInfo?.data?.settings,
       ...overrideData
     };
 
@@ -194,7 +211,7 @@ const MainApp = () => {
       <header className="app-header glass-panel">
         <div className="header-top">
           <h1>Sınav Değerlendirme</h1>
-          <span className="badge">v1.6.0</span>
+          <span className="badge">v1.6.1</span>
         </div>
         <nav className="tabs">
           <button className={activeTab === 'exams' ? 'active' : ''} onClick={() => setActiveTab('exams')}>1. Sınavlar</button>
@@ -232,9 +249,9 @@ const MainApp = () => {
           setAnswerKeyData(newData);
           saveCurrentExam({ answerKeyData: newData });
         }} />}
-        {activeTab === 'evaluation' && <EvaluationTab attendanceData={attendanceData} opticalData={opticalData} answerKeyData={answerKeyData} results={results} setResults={setResults} onSave={handleAutoSave} />}
-        {activeTab === 'reports' && <ReportsTab results={results} examName={examInfo?.name} answerKey={answerKeyData} />}
-        {activeTab === 'exams' && <ExamsTab currentData={{ attendanceData, opticalData, answerKeyData, results }} onLoadExam={handleLoadExam} onStartExam={handleStartExam} />}
+        {activeTab === 'evaluation' && <EvaluationTab attendanceData={attendanceData} opticalData={opticalData} answerKeyData={answerKeyData} results={results} setResults={setResults} onSave={handleAutoSave} examSettings={examInfo?.data?.settings} />}
+        {activeTab === 'reports' && <ReportsTab results={results} examName={examInfo?.name} answerKey={answerKeyData} examSettings={examInfo?.data?.settings} />}
+        {activeTab === 'exams' && <ExamsTab currentData={{ attendanceData, opticalData, answerKeyData, results }} onLoadExam={handleLoadExam} onStartExam={handleStartExam} onUpdateSettings={handleUpdateSettings} />}
         {activeTab === 'stats' && <StatsTab onOpenCheating={handleOpenCheating} />}
         {activeTab === 'cheating' && <CheatingReport results={results} examName={examInfo?.name} answerKey={answerKeyData} />}
         {activeTab === 'about' && <AboutTab />}

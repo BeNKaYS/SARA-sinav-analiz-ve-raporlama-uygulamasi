@@ -88,7 +88,7 @@ export default function HelpModal({ onClose }) {
                     </section>
 
                     <div className="version-info">
-                        <strong>Versiyon:</strong> 1.6.0 | <strong>Güncelleme:</strong> 19 Ocak 2026
+                        <strong>Versiyon:</strong> 1.6.1 | <strong>Güncelleme:</strong> 23 Ocak 2026
                     </div>
 
                     <div className="developer-info">

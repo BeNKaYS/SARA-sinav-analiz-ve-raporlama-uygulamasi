@@ -1,26 +1,45 @@
-const path = require('path');
-const rcedit = require('rcedit');
+ï»¿const path = require('path');
+const { rcedit } = require('rcedit');
 
-exports.default = async function (context) {
-    // context.appOutDir: path to win-unpacked directory
-    // context.packager.appInfo.productFilename: "Optik Deðerlendirme"
+module.exports = async function (context) {
+    const { electronPlatformName, appOutDir } = context;
+    
+    if (electronPlatformName !== 'win32') {
+        return;
+    }
 
-    const exeName = context.packager.appInfo.productFilename + ".exe";
-    const exePath = path.join(context.appOutDir, exeName);
-
-    // Proje ana dizinini bul
-    const projectDir = context.packager.projectDir;
-    const iconPath = path.join(projectDir, "public", "icon.ico");
-
-    console.log(`[Custom Hook] Ýkon deðiþtiriliyor: ${exePath}`);
-    console.log(`[Custom Hook] Ýkon dosyasý: ${iconPath}`);
-
+    const exePath = path.join(appOutDir, context.packager.appInfo.productFilename + '.exe');
+    const iconPath = path.resolve(__dirname, '../public/icon.ico');
+    
+    console.log('='.repeat(60));
+    console.log('[AfterPack] Icon degistirme islemi basliyor...');
+    console.log('[AfterPack] EXE Yolu:', exePath);
+    console.log('[AfterPack] Icon Yolu:', iconPath);
+    
     try {
+        const fs = require('fs');
+        
+        if (!fs.existsSync(iconPath)) {
+            throw new Error('Icon dosyasi bulunamadi: ' + iconPath);
+        }
+        
+        if (!fs.existsSync(exePath)) {
+            throw new Error('EXE dosyasi bulunamadi: ' + exePath);
+        }
+        
+        console.log('[AfterPack] Dosyalar mevcut, rcedit calistiriliyor...');
+        
         await rcedit(exePath, {
             icon: iconPath
         });
-        console.log("[Custom Hook] Ýkon baþarýyla deðiþtirildi! ?");
+        
+        console.log('[AfterPack] OK Icon basariyla degistirildi!');
+        console.log('='.repeat(60));
     } catch (error) {
-        console.error("[Custom Hook] Ýkon deðiþtirme hatasý ?:", error);
+        console.error('[AfterPack] HATA: Icon degistirilemedi!');
+        console.error('[AfterPack] Hata Detayi:', error.message);
+        console.error('[AfterPack] Stack:', error.stack);
+        console.log('='.repeat(60));
+        throw error;
     }
 };

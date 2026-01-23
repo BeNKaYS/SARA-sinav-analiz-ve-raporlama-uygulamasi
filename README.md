@@ -1,7 +1,7 @@
 # 🎓 Optik Form Değerlendirme Uygulaması
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.6.0-blue.svg?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/version-1.6.1-blue.svg?style=for-the-badge" />
   <img src="https://img.shields.io/badge/platform-Windows-lightgrey.svg?style=for-the-badge" />
   <img src="https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge" />
   <img src="https://img.shields.io/badge/status-active-success.svg?style=for-the-badge" />

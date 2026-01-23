@@ -14,7 +14,8 @@ export default function ExamsTab({
     currentData,
     onLoadExam,
     onStartExam,
-    onDeleteExam
+    onDeleteExam,
+    onUpdateSettings
 }) {
     // -------------------------------------------------------------------------
     //  STATE YÖNETİMİ
@@ -23,6 +24,22 @@ export default function ExamsTab({
     const [examName, setExamName] = useState('');
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState(null);
+
+    // Sınav Ayarları State'leri (localStorage'dan başlat veya varsayılan)
+    const [questionCount, setQuestionCount] = useState(() => localStorage.getItem('def_questionCount') || 100);
+    const [scoringType, setScoringType] = useState(() => localStorage.getItem('def_scoringType') || 'net'); // 'net' | 'correct'
+    const [wrongRatio, setWrongRatio] = useState(() => localStorage.getItem('def_wrongRatio') || '4'); // '0', '3', '4'
+    const [roundScores, setRoundScores] = useState(() => localStorage.getItem('def_roundScores') === 'true');
+    const [passGrade, setPassGrade] = useState(() => localStorage.getItem('def_passGrade') || '50');
+
+    // Ayarlar değiştikçe kaydet
+    useEffect(() => {
+        localStorage.setItem('def_questionCount', questionCount);
+        localStorage.setItem('def_scoringType', scoringType);
+        localStorage.setItem('def_wrongRatio', wrongRatio);
+        localStorage.setItem('def_roundScores', roundScores);
+        localStorage.setItem('def_passGrade', passGrade);
+    }, [questionCount, scoringType, wrongRatio, roundScores, passGrade]);
 
     // -------------------------------------------------------------------------
     //  YARDIMCI ENDPOİNTS VEYA MANTIK
@@ -44,6 +61,25 @@ export default function ExamsTab({
             setMsg({ type: 'error', text: 'Sınav listesi alınamadı. Lütfen uygulamayı yeniden başlatın.' });
         } finally {
             setLoading(false);
+        }
+    };
+
+    /**
+     * Ayarları aktif sınava uygular
+     */
+    const handleApplySettings = () => {
+        if (onUpdateSettings) {
+            onUpdateSettings({
+                questionCount: Number(questionCount),
+                scoringType,
+                wrongRatio: Number(wrongRatio),
+                roundScores,
+                passGrade: Number(passGrade)
+            });
+            setMsg({ type: 'success', text: 'Ayarlar güncellendi ve kaydedildi.' });
+
+            // 3 saniye sonra mesajı temizle
+            setTimeout(() => setMsg(null), 3000);
         }
     };
 
@@ -82,7 +118,15 @@ export default function ExamsTab({
                 id: Date.now().toString(),
                 name: finalName,
                 timestamp: Date.now(),
-                data: {}
+                data: {
+                    settings: {
+                        questionCount: Number(questionCount),
+                        scoringType,
+                        wrongRatio: Number(wrongRatio),
+                        roundScores,
+                        passGrade: Number(passGrade)
+                    }
+                }
             };
 
             // Veritabanına kaydet
@@ -154,34 +198,101 @@ export default function ExamsTab({
                         <p className="creator-subtitle">Sınav adı girebilir veya otomatik isim ile başlatabilirsiniz</p>
                     </div>
                 </div>
-                <div className="creator-input-section">
-                    <div className="modern-input-wrapper">
-                        <span className="input-icon">📝</span>
-                        <input
-                            type="text"
-                            placeholder="Sınav Adı (Örn: SRC Kızıltepe) - Boş Bırakılabilir"
-                            value={examName}
-                            onChange={(e) => setExamName(e.target.value)}
-                            className="modern-exam-input"
-                        />
+                <div className="creator-content-layout">
+                    {/* Sol Kolon: İsim ve Başlat */}
+                    <div className="creator-left-col">
+                        <div className="modern-input-wrapper">
+
+                            <input
+                                type="text"
+                                placeholder="Sınav Adı (İsteğe Bağlı)"
+                                value={examName}
+                                onChange={(e) => setExamName(e.target.value)}
+                                className="modern-exam-input"
+                            />
+                            <span className="helper-text">
+                                {examName.trim()
+                                    ? `* "${examName}_TARIH" olarak kaydedilecek`
+                                    : `* Otomatik "SNV_TARIH" olarak kaydedilecek`
+                                }
+                            </span>
+                        </div>
+                        <button
+                            className="modern-start-btn"
+                            onClick={handleStart}
+                            disabled={loading}
+                        >
+                            <span className="btn-icon">▶</span>
+                            <span className="btn-text">{loading ? 'Oluşturuluyor...' : 'BAŞLA'}</span>
+                        </button>
                     </div>
-                    <button
-                        className="modern-start-btn"
-                        onClick={handleStart}
-                        disabled={loading}
-                    >
-                        <span className="btn-icon">▶</span>
-                        <span className="btn-text">{loading ? 'Oluşturuluyor...' : 'BAŞLA'}</span>
-                    </button>
-                </div>
-                <div className="creator-info">
-                    <span className="info-icon">💡</span>
-                    <span className="info-text">
-                        {examName.trim()
-                            ? `"${examName}_TARIH" formatında kaydedilecek`
-                            : `Otomatik "SNV_TARIH" formatında kaydedilecek`
-                        }
-                    </span>
+
+                    {/* Sağ Kolon: Ayarlar */}
+                    <div className="creator-right-col">
+                        <div className="settings-grid">
+                            <div className="modern-input-wrapper">
+                                <label>Soru Sayısı</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="500"
+                                    value={questionCount}
+                                    onChange={(e) => setQuestionCount(e.target.value)}
+                                    className="modern-exam-input small"
+                                />
+                            </div>
+                            <div className="modern-input-wrapper">
+                                <label>Puanlama</label>
+                                <select
+                                    value={scoringType}
+                                    onChange={(e) => setScoringType(e.target.value)}
+                                    className="modern-exam-input small"
+                                >
+                                    <option value="net">Net Üzerinden</option>
+                                    <option value="correct">Doğru Sayısı</option>
+                                </select>
+                            </div>
+                            <div className="modern-input-wrapper">
+                                <label>Yanlış Götürme</label>
+                                <select
+                                    value={wrongRatio}
+                                    onChange={(e) => setWrongRatio(e.target.value)}
+                                    className="modern-exam-input small"
+                                >
+                                    <option value="0">Yok</option>
+                                    <option value="3">3 Yanlış 1 Doğruyu</option>
+                                    <option value="4">4 Yanlış 1 Doğruyu</option>
+                                </select>
+                            </div>
+                            <div className="modern-input-wrapper">
+                                <label>Geçer Not</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={passGrade}
+                                    onChange={(e) => setPassGrade(e.target.value)}
+                                    className="modern-exam-input small"
+                                />
+                            </div>
+                            <div className="modern-input-wrapper checkbox-container">
+                                <label>&nbsp;</label>
+                                <div className="checkbox-wrapper" onClick={() => setRoundScores(!roundScores)}>
+                                    <div className={`custom-checkbox ${roundScores ? 'checked' : ''}`}>
+                                        {roundScores && '✓'}
+                                    </div>
+                                    <label style={{ cursor: 'pointer', margin: 0 }}>Puanları Yuvarla</label>
+                                </div>
+                            </div>
+                            <button
+                                className="apply-settings-btn"
+                                onClick={handleApplySettings}
+                                title="Ayarları Kaydet ve Uygula"
+                            >
+                                Sınava Uygula
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -296,12 +407,124 @@ export default function ExamsTab({
                     gap: 12px;
                     margin-bottom: 16px;
                     flex-wrap: wrap;
+                    align-items: stretch;
+                }
+
+                .settings-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 12px;
+                    background: rgba(255, 255, 255, 0.1);
+                    padding: 15px;
+                    border-radius: 12px;
+                }
+
+                .creator-content-layout {
+                    display: flex;
+                    gap: 20px;
+                    align-items: flex-start;
+                }
+
+                .creator-left-col {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 15px;
+                    background: #7C76CF;
+                    padding: 15px;
+                    border-radius: 12px;
+                }
+
+                .creator-right-col {
+                    flex: 2;
+                }
+
+                .apply-settings-btn {
+                    grid-column: span 2;
+                    background: rgba(255, 255, 255, 0.2);
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    color: white;
+                    padding: 8px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-weight: 600;
+                    margin-top: 5px;
+                    transition: all 0.2s;
+                }
+                
+                .apply-settings-btn:hover {
+                    background: rgba(255, 255, 255, 0.3);
                 }
 
                 .modern-input-wrapper {
                     position: relative;
                     flex: 1;
-                    min-width: 300px;
+                    min-width: 0;
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .helper-text {
+                    font-size: 0.7rem;
+                    color: rgba(255, 255, 255, 0.6);
+                    margin-top: 4px;
+                    margin-left: 2px;
+                    font-style: italic;
+                }
+
+                .modern-input-wrapper label {
+                    display: block;
+                    font-size: 0.7rem;
+                    color: rgba(255, 255, 255, 0.8);
+                    margin-bottom: 2px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                
+                .modern-exam-input.small {
+                    padding: 8px;
+                    font-size: 0.9rem;
+                }
+
+                .checkbox-container {
+                    grid-column: span 1;
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .checkbox-wrapper {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    cursor: pointer;
+                    background: rgba(255, 255, 255, 0.15);
+                    padding: 0 10px;
+                    border-radius: 10px;
+                    height: 100%;
+                    min-height: 38px;
+                    width: 100%;
+                    box-sizing: border-box;
+                }
+
+                .custom-checkbox {
+                    width: 18px;
+                    height: 18px;
+                    border: 2px solid rgba(255, 255, 255, 0.6);
+                    border-radius: 4px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: bold;
+                    font-size: 12px;
+                    transition: all 0.2s;
+                    flex-shrink: 0;
+                }
+
+                .custom-checkbox.checked {
+                    background: #f59e0b;
+                    border-color: #f59e0b;
                 }
 
                 .input-icon {
@@ -311,11 +534,14 @@ export default function ExamsTab({
                     transform: translateY(-50%);
                     font-size: 1.2rem;
                     pointer-events: none;
+                    line-height: 1;
+                    display: flex;
+                    align-items: center;
                 }
 
                 .modern-exam-input {
                     width: 100%;
-                    padding: 14px 14px 14px 45px;
+                    padding: 14px;
                     background: white;
                     border: 2px solid rgba(255, 255, 255, 0.3);
                     border-radius: 12px;
@@ -340,7 +566,7 @@ export default function ExamsTab({
                     display: flex;
                     align-items: center;
                     gap: 10px;
-                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                    background: #F39B0B;
                     color: white;
                     padding: 14px 32px;
                     border: none;
@@ -349,13 +575,13 @@ export default function ExamsTab({
                     font-weight: 700;
                     cursor: pointer;
                     transition: all 0.3s ease;
-                    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+                    box-shadow: 0 4px 12px rgba(243, 155, 11, 0.3);
                     white-space: nowrap;
                 }
 
                 .modern-start-btn:hover:not(:disabled) {
                     transform: translateY(-2px);
-                    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+                    box-shadow: 0 6px 20px rgba(243, 155, 11, 0.4);
                 }
 
                 .modern-start-btn:disabled {
@@ -608,6 +834,6 @@ export default function ExamsTab({
                     color: #94a3b8;
                 }
             `}</style>
-        </div>
+        </div >
     );
 }
