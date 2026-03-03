@@ -15,7 +15,9 @@ export default function AboutTab() {
 
                 {/* Header Section */}
                 <div className="about-header text-center">
-                    <div className="logo-placeholder">👁️</div>
+                    <div className="logo-placeholder">
+                        <img src="/SARA_Hakkinda.png" alt="SARA Hakkında Görseli" className="about-header-logo" />
+                    </div>
                     <h1>Optik Değerlendirme</h1>
                     <p className="version">v1.6.1 (Stable)</p>
                     <p className="description">
@@ -30,29 +32,31 @@ export default function AboutTab() {
                 <div className="dev-card-wrapper">
                     <h3>👨‍💻 Geliştirici Kartı</h3>
                     <div className="dev-card glass-panel-inner">
-                        <div className="dev-avatar">SÖ</div>
+                        <div className="dev-avatar">
+                            <img src="/Arka_qq.png" alt="Geliştirici Görseli" className="dev-avatar-image" />
+                        </div>
                         <div className="dev-info">
                             <h2 className="dev-name">Sercan ÖZDEMİR</h2>
                             <p className="dev-title">Bilişim Teknolojileri Öğretmeni</p>
-                            <p className="dev-alias">@BeNKaYS</p>
-                            <p className="dev-tagline">Makine Öğrenmesi & C++ Tutkunu</p>
+                            <p className="dev-alias">BeNKaYS</p>
+                            <p className="dev-tagline">Bilişim Teknolojileri Öğretmeni · Makine Öğrenmesi · C++</p>
 
                             <div className="dev-bio">
-                                <p><em>"Kod sadece çalışmamalı, anlaşılmalı."</em></p>
+                                <p><em>"Öğretmek en iyi hata ayıklama yöntemidir."</em></p>
                                 <p className="bio-text">
-                                    Eğitim ve yazılımı aynı potada eriten; özellikle C++, algoritmalar ve
-                                    Makine Öğrenmesi odaklı projeler geliştiren bir geliştiriciyim.
+                                    Eğitim ve yazılımı birleştiren, özellikle C++, algoritmalar ve Makine Öğrenmesi
+                                    üzerine projeler geliştiren bir yazılım öğretmeniyim. Karmaşık sistemleri sade ve
+                                    anlaşılır hale getirmek temel prensibimdir.
                                 </p>
                             </div>
 
                             <div className="dev-expertise">
-                                <h4>🧩 Uzmanlık Alanları</h4>
+                                <h4>🧩 Odak Alanlarım</h4>
                                 <div className="expertise-tags">
                                     <span>🧠 Makine Öğrenmesi</span>
-                                    <span>⚙️ C++ (OOP, Performans)</span>
-                                    <span>🖥️ Algoritma & Mantıksal Tasarım</span>
+                                    <span>⚙️ C++ & OOP</span>
+                                    <span>📐 Algoritma Tasarımı</span>
                                     <span>📚 Eğitim Odaklı Yazılım</span>
-                                    <span>🔧 Sistem & Uygulama Geliştirme</span>
                                 </div>
                             </div>
 
@@ -69,17 +73,12 @@ export default function AboutTab() {
                             </div>
 
                             <div className="dev-motto">
-                                <strong>✨ Motto:</strong> <em>"Üreten öğretir, öğreten kalıcı iz bırakır."</em>
+                                <em>Gündüz sınıf, gece terminal.</em>
                             </div>
                         </div>
                     </div>
 
                     <div className="divider"></div>
-
-                    {/* Settings / Appearance */}
-
-
-
 
                     {/* Tech Stack */}
                     <div className="tech-stack">
@@ -87,11 +86,12 @@ export default function AboutTab() {
                         <div className="tags">
                             <span>C++</span>
                             <span>Python</span>
+                            <span>OpenCV</span>
                             <span>Git</span>
                             <span>Linux</span>
-                            <span>OpenCV</span>
                             <span>VS Code</span>
                         </div>
+
                         <h4 style={{ marginTop: '30px' }}>Bu Projede Kullanılanlar</h4>
                         <div className="tags">
                             <span>Electron.js</span>
@@ -101,8 +101,22 @@ export default function AboutTab() {
                         </div>
                     </div>
 
+                    <div className="contact-block">
+                        <h4>İletişim</h4>
+                        <p>Proje iş birlikleri veya sorularınız için aşağıdaki kanallardan ulaşabilirsiniz.</p>
+                        <div className="contact-links">
+                            <a href="mailto:sercanozdemir@yandex.com" className="dev-link">📧 sercanozdemir@yandex.com</a>
+                            <a href="https://wa.me/905068858585?text=Merhaba%20bilgi%20almak%20istiyorum"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="dev-link whatsapp">
+                                💬 WhatsApp'tan hızlı ulaşın
+                            </a>
+                        </div>
+                    </div>
+
                     <footer className="about-footer">
-                        <p>&copy; 2024 Tüm Hakları Saklıdır.</p>
+                        <p>&copy; 2026 Tüm Hakları Saklıdır.</p>
                     </footer>
                 </div>
             </div>
@@ -115,7 +129,15 @@ export default function AboutTab() {
                 }
                 .text-center { text-align: center; }
                 
-                .logo-placeholder { font-size: 4rem; margin-bottom: 10px; }
+                .logo-placeholder { margin-bottom: 10px; }
+                .about-header-logo {
+                    width: 518px;
+                    height: 171px;
+                    object-fit: cover;
+                    border-radius: 16px;
+                    border: 2px solid rgba(99, 102, 241, 0.25);
+                    box-shadow: 0 8px 18px rgba(99, 102, 241, 0.18);
+                }
                 .about-header h1 { font-size: 2.5rem; margin: 10px 0; background: linear-gradient(to right, #6366f1, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
                 .version { color: var(--text-secondary); font-family: monospace; background: rgba(0,0,0,0.2); display: inline-block; padding: 4px 10px; border-radius: 20px; }
                 .description { margin-top: 20px; font-size: 1.1rem; line-height: 1.6; color: var(--text-secondary); max-width: 600px; margin-left: auto; margin-right: auto; }
@@ -140,15 +162,20 @@ export default function AboutTab() {
                 .dev-avatar {
                     width: 100px;
                     height: 100px;
-                    background: linear-gradient(135deg, #6366f1, #a855f7);
+                    background: #ffffff;
                     border-radius: 50%;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-size: 2.5rem;
-                    font-weight: bold;
-                    color: white;
-                    box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+                    overflow: hidden;
+                    border: 3px solid #4a6ea8;
+                    box-shadow: 0 10px 20px rgba(74, 110, 168, 0.25);
+                }
+
+                .dev-avatar-image {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
                 }
 
                 .dev-info { flex: 1; }
@@ -248,43 +275,9 @@ export default function AboutTab() {
                     font-size: 0.95rem;
                     color: var(--text-secondary);
                 }
-                .dev-motto strong {
-                    color: var(--accent);
-                }
                 .dev-motto em {
                     color: var(--text-primary);
                 }
-
-                .settings-section h3 { margin-bottom: 20px; }
-                .setting-item {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 20px;
-                    background: rgba(255,255,255,0.02);
-                    border-radius: 12px;
-                }
-                .light-mode .setting-item { background: rgba(0,0,0,0.03); }
-
-                .setting-label { display: flex; flex-direction: column; gap: 5px; }
-                .setting-label span { font-weight: 600; font-size: 1.1rem; }
-                .setting-label small { color: var(--text-secondary); }
-
-                .theme-toggle-btn {
-                    padding: 10px 20px;
-                    border-radius: 8px;
-                    border: none;
-                    background: var(--bg-tertiary);
-                    color: var(--text-primary);
-                    font-weight: 600;
-                    font-size: 1rem;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                    border: 1px solid transparent;
-                }
-                .theme-toggle-btn:hover { border-color: var(--accent); transform: scale(1.05); }
-                .theme-toggle-btn.light { background: #e0f2fe; color: #0284c7; }
-                .theme-toggle-btn.dark { background: #1e293b; color: #fcd34d; }
 
                 .tech-stack { text-align: center; margin-top: 50px; }
                 .tech-stack h4 { color: var(--text-secondary); margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem; }
@@ -298,6 +291,28 @@ export default function AboutTab() {
                     border: 1px solid rgba(255,255,255,0.1);
                 }
                 .light-mode .tags span { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); }
+
+                .contact-block {
+                    margin-top: 45px;
+                    text-align: center;
+                }
+                .contact-block h4 {
+                    color: var(--text-secondary);
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    font-size: 0.9rem;
+                    margin-bottom: 10px;
+                }
+                .contact-block p {
+                    color: var(--text-secondary);
+                    margin-bottom: 14px;
+                }
+                .contact-links {
+                    display: flex;
+                    justify-content: center;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                }
 
                 .about-footer { text-align: center; margin-top: 60px; color: var(--text-secondary); font-size: 0.8rem; opacity: 0.6; }
             `}</style>

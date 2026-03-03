@@ -179,6 +179,44 @@ const MainApp = () => {
     setActiveTab('cheating');
   };
 
+  const moduleItems = [
+    { id: 'exams', icon: 'folder', colorClass: 'tone-red', panelClass: 'panel-red', label: 'Sınavlar', desc: 'Yeni sınav başlatma, kayıtlı sınavları güvenli şekilde yükleme/silme ve sınav ayarlarını merkezi olarak yönetme ekranı. Bu modülde yapılan ayarlar, sonraki tüm değerlendirme adımlarını doğrudan etkiler.' },
+    { id: 'attendance', icon: 'list', colorClass: 'tone-yellow', panelClass: 'panel-yellow', label: 'Yoklama', desc: 'Aday listesini Excel dosyasından içeri alır, zorunlu alanları kontrol eder ve değerlendirme için referans veri setini hazırlar. TC Kimlik, Ad Soyad ve Belge Türü doğruluğu bu aşamada kritik önemdedir.' },
+    { id: 'optical', icon: 'scan', colorClass: 'tone-green', panelClass: 'panel-green', label: 'Optik', desc: 'Optik okuyucudan gelen TXT/FMT verilerini parser kurallarıyla ayrıştırır. Alan başlangıç/uzunluk ayarlarını düzenleyerek TC, kitapçık ve cevap alanlarının doğru eşleşmesini sağlamanıza yardımcı olur.' },
+    { id: 'answerKey', icon: 'key', colorClass: 'tone-blue', panelClass: 'panel-blue', label: 'Anahtar', desc: 'Cevap anahtarını kitapçık türü ve belge türüne göre sisteme tanımlar. Bu eşleştirme, doğru-yanlış ve net hesaplamalarının hatasız yapılabilmesi için temel kaynaktır.' },
+    { id: 'evaluation', icon: 'calc', colorClass: 'tone-pink', panelClass: 'panel-pink', label: 'Değerlendirme', desc: 'Yoklama, optik veri ve cevap anahtarı birlikte işlenerek aday bazlı puan, net ve başarı durumu hesaplanır. Sonuçlar burada gözden geçirilir ve resmi çıktı öncesi son kontrol yapılır.' },
+    { id: 'reports', icon: 'report', colorClass: 'tone-cyan', panelClass: 'panel-cyan', label: 'Raporlar', desc: 'Değerlendirme çıktılarının resmi formatta sunulduğu ve dışa aktarıldığı modüldür. Excel/PDF benzeri çıktılar için gerekli rapor düzeni, başlıklar ve içerik bu bölümden yönetilir.' },
+    { id: 'stats', icon: 'chart', colorClass: 'tone-orange', panelClass: 'panel-orange', label: 'İstatistik', desc: 'Sınav performansını genel başarı oranı, ortalama ve dağılım metrikleriyle analiz eder. Geçmiş sınavlarla karşılaştırmalı görünüm sağlayarak karar destek sürecini güçlendirir.' },
+    { id: 'about', icon: 'info', colorClass: 'tone-info', panelClass: 'panel-info', label: 'Hakkında', desc: 'Uygulamanın amacı, sürüm geçmişi, geliştirici bilgisi ve destek kanallarını içerir. Teknik kimlik ve kullanım bağlamı bu modülde özet şekilde sunulur.' }
+  ];
+
+  const MenuIcon = ({ name }) => {
+    const svgProps = {
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2.8,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      className: 'tool-icon-svg'
+    };
+
+    switch (name) {
+      case 'folder': return <svg {...svgProps}><path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>;
+      case 'list': return <svg {...svgProps}><path d="M8 7h12" /><path d="M8 12h12" /><path d="M8 17h12" /><circle cx="4" cy="7" r="1" /><circle cx="4" cy="12" r="1" /><circle cx="4" cy="17" r="1" /></svg>;
+      case 'scan': return <svg {...svgProps}><path d="M4 7V5h2" /><path d="M20 7V5h-2" /><path d="M4 17v2h2" /><path d="M20 17v2h-2" /><path d="M7 12h10" /></svg>;
+      case 'key': return <svg {...svgProps}><circle cx="8" cy="12" r="3" /><path d="M11 12h9" /><path d="M16 12v2" /><path d="M19 12v2" /></svg>;
+      case 'calc': return <svg {...svgProps}><rect x="5" y="4" width="14" height="16" rx="2" /><path d="M8 8h8" /><path d="M8 12h3" /><path d="M13 12h3" /><path d="M8 16h3" /><path d="M13 16h3" /></svg>;
+      case 'report': return <svg {...svgProps}><path d="M7 4h8l4 4v12H7z" /><path d="M15 4v4h4" /><path d="M10 13h6" /><path d="M10 17h6" /></svg>;
+      case 'chart': return <svg {...svgProps}><path d="M5 19V9" /><path d="M11 19V5" /><path d="M17 19v-7" /></svg>;
+      case 'info': return <svg {...svgProps}><circle cx="12" cy="12" r="8" /><path d="M12 11v5" /><circle cx="12" cy="8" r="1" fill="currentColor" /></svg>;
+      default: return <svg {...svgProps}><circle cx="12" cy="12" r="8" /></svg>;
+    }
+  };
+
+  const activeModule = moduleItems.find((item) => item.id === activeTab) || moduleItems[0];
+  const statusText = examInfo?.name ? `Aktif sınav: ${examInfo.name}` : 'Hazır';
+
   // -------------------------------------------------------------------------
   //  3. KOŞULLU RENDER (HOOK'LARDAN SONRA OLMALI)
   // -------------------------------------------------------------------------
@@ -208,54 +246,64 @@ const MainApp = () => {
 
   return (
     <div className="app-container">
-      <header className="app-header glass-panel">
-        <div className="header-top">
-          <h1>Sınav Değerlendirme</h1>
-          <span className="badge">v1.6.1</span>
+      <aside className="left-menu">
+        <div className="menu-brand" title="SARA">
+          <img src="/SARA_PNG.png" alt="SARA" className="menu-brand-logo" />
         </div>
-        <nav className="tabs">
-          <button className={activeTab === 'exams' ? 'active' : ''} onClick={() => setActiveTab('exams')}>1. Sınavlar</button>
-          <button className={activeTab === 'attendance' ? 'active' : ''} onClick={() => setActiveTab('attendance')}>
-            2. Yoklama Listesi {attendanceData && <span className="status-dot success"></span>}
-          </button>
-          <button className={activeTab === 'optical' ? 'active' : ''} onClick={() => setActiveTab('optical')}>
-            3. Optik Veriler {opticalData && <span className="status-dot success"></span>}
-          </button>
-          <button className={activeTab === 'answerKey' ? 'active' : ''} onClick={() => setActiveTab('answerKey')}>
-            4. Cevap Anahtarı {answerKeyData && <span className="status-dot success"></span>}
-          </button>
-          <button className={activeTab === 'evaluation' ? 'active' : ''} onClick={() => setActiveTab('evaluation')}>
-            5. Değerlendirme {results && <span className="status-dot success"></span>}
-          </button>
-          <button className={activeTab === 'reports' ? 'active' : ''} onClick={() => setActiveTab('reports')}>
-            6. Raporlar {results && <span className="status-dot success"></span>}
-          </button>
-          <button className={activeTab === 'stats' ? 'active' : ''} onClick={() => setActiveTab('stats')}>
-            7. İstatistikler
-          </button>
+
+        <div className="menu-tools">
+          {moduleItems.filter((item) => item.id !== 'about').map((item) => (
+            <button
+              key={item.id}
+              className={`tool-btn ${item.colorClass} ${activeTab === item.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(item.id)}
+              title={item.label}
+            >
+              <MenuIcon name={item.icon} />
+            </button>
+          ))}
+        </div>
+
+        <div className="menu-bottom-tools">
           <button
-            className={`about-btn ${activeTab === 'about' ? 'active' : ''}`}
+            className={`tool-btn tone-info info-round ${activeTab === 'about' ? 'active' : ''}`}
             onClick={() => setActiveTab('about')}
-            style={{ marginLeft: 'auto', border: '1px solid var(--accent)' }}
+            title="Hakkında"
           >
-            ℹ️ Hakkında
+            <MenuIcon name="info" />
           </button>
-        </nav>
-      </header>
-      <main className="app-content">
-        {activeTab === 'attendance' && <AttendanceTab data={attendanceData} setData={setAttendanceData} onNext={() => setActiveTab('optical')} />}
-        {activeTab === 'optical' && <OpticalTab data={opticalData} setData={setOpticalData} attendanceData={attendanceData} onNext={() => setActiveTab('answerKey')} />}
-        {activeTab === 'answerKey' && <AnswerKeyTab data={answerKeyData} setData={setAnswerKeyData} attendanceData={attendanceData} onNext={() => setActiveTab('evaluation')} onSave={(newData) => {
-          setAnswerKeyData(newData);
-          saveCurrentExam({ answerKeyData: newData });
-        }} />}
-        {activeTab === 'evaluation' && <EvaluationTab attendanceData={attendanceData} opticalData={opticalData} answerKeyData={answerKeyData} results={results} setResults={setResults} onSave={handleAutoSave} examSettings={examInfo?.data?.settings} />}
-        {activeTab === 'reports' && <ReportsTab results={results} examName={examInfo?.name} answerKey={answerKeyData} examSettings={examInfo?.data?.settings} />}
-        {activeTab === 'exams' && <ExamsTab currentData={{ attendanceData, opticalData, answerKeyData, results }} onLoadExam={handleLoadExam} onStartExam={handleStartExam} onUpdateSettings={handleUpdateSettings} />}
-        {activeTab === 'stats' && <StatsTab onOpenCheating={handleOpenCheating} />}
-        {activeTab === 'cheating' && <CheatingReport results={results} examName={examInfo?.name} answerKey={answerKeyData} />}
-        {activeTab === 'about' && <AboutTab />}
-      </main>
+        </div>
+      </aside>
+
+      <section className="main-zone">
+        <header className={`module-description glass-panel ${activeModule.panelClass}`}>
+          <div className="module-title-row">
+            <h1>{activeModule.label}</h1>
+          </div>
+          <p className="module-desc-text">{activeModule.desc}</p>
+        </header>
+
+        <main className="module-workspace glass-panel">
+          {activeTab === 'attendance' && <AttendanceTab data={attendanceData} setData={setAttendanceData} onNext={() => setActiveTab('optical')} />}
+          {activeTab === 'optical' && <OpticalTab data={opticalData} setData={setOpticalData} attendanceData={attendanceData} onNext={() => setActiveTab('answerKey')} />}
+          {activeTab === 'answerKey' && <AnswerKeyTab data={answerKeyData} setData={setAnswerKeyData} attendanceData={attendanceData} onNext={() => setActiveTab('evaluation')} onSave={(newData) => {
+            setAnswerKeyData(newData);
+            saveCurrentExam({ answerKeyData: newData });
+          }} />}
+          {activeTab === 'evaluation' && <EvaluationTab attendanceData={attendanceData} opticalData={opticalData} answerKeyData={answerKeyData} results={results} setResults={setResults} onSave={handleAutoSave} examSettings={examInfo?.data?.settings} />}
+          {activeTab === 'reports' && <ReportsTab results={results} examName={examInfo?.name} answerKey={answerKeyData} examSettings={examInfo?.data?.settings} />}
+          {activeTab === 'exams' && <ExamsTab currentData={{ attendanceData, opticalData, answerKeyData, results }} onLoadExam={handleLoadExam} onStartExam={handleStartExam} onUpdateSettings={handleUpdateSettings} />}
+          {activeTab === 'stats' && <StatsTab onOpenCheating={handleOpenCheating} />}
+          {activeTab === 'cheating' && <CheatingReport results={results} examName={examInfo?.name} answerKey={answerKeyData} />}
+          {activeTab === 'about' && <AboutTab />}
+        </main>
+
+        <footer className="status-bar">
+          <span>Durum: {statusText}</span>
+          <span>Modül: {activeModule.label}</span>
+        </footer>
+      </section>
+
       {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
     </div>
   );

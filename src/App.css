@@ -1,147 +1,178 @@
 .app-container {
   display: flex;
-  flex-direction: column;
   height: 100%;
   padding: 10px;
+  gap: 10px;
+  box-sizing: border-box;
+  background: #d8d8da;
+}
+
+.left-menu {
+  width: 74px;
+  background: #1a0505;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 6px;
   box-sizing: border-box;
 }
 
-.app-header {
-  padding: 12px 20px;
-  margin-bottom: 10px;
+.menu-brand {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid #cfe8ff;
+  overflow: hidden;
+  background: #fff;
+  margin-bottom: 12px;
+}
+
+.menu-brand-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.menu-tools {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.header-top {
-  display: flex;
   align-items: center;
-  gap: 15px;
-}
-
-.app-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  background: var(--header-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.badge {
-  background: rgba(99, 102, 241, 0.1);
-  color: var(--accent);
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border: 1px solid rgba(99, 102, 241, 0.2);
-}
-
-.badge-green {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--success);
-  border-color: rgba(16, 185, 129, 0.2);
-}
-
-.badge-red {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--error);
-  border-color: rgba(239, 68, 68, 0.2);
-}
-
-.help-btn {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: var(--text-secondary);
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.help-btn:hover {
-  background: var(--hover-bg);
-  color: var(--hover-text);
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
-.tabs {
-  display: flex;
-  gap: 5px;
-  flex-wrap: nowrap;
-}
-
-.tabs button {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  padding: 10px 14px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.tabs button:hover {
-  background: var(--hover-bg);
-  color: var(--text-primary);
-}
-
-.tabs button.active {
-  background: var(--accent);
-  color: white;
-  box-shadow: 0 4px 12px var(--accent-glow);
-}
-
-.app-content {
+  gap: 8px;
   flex: 1;
+}
+
+.menu-bottom-tools {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  padding-top: 10px;
+  margin-top: 6px;
+}
+
+.tool-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  color: #101010;
+  display: grid;
+  place-items: center;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tool-btn:hover {
+  transform: translateY(-1px);
+}
+
+.tool-btn.active {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.85) inset;
+}
+
+.tool-icon-svg {
+  width: 24px;
+  height: 24px;
+}
+
+.tone-red { background: #FF4757; }
+.tone-yellow { background: #FFC312; }
+.tone-green { background: #2ED573; }
+.tone-blue { background: #1E90FF; }
+.tone-pink { background: #FF6B81; }
+.tone-cyan { background: #00D2D3; }
+.tone-orange { background: #FF9F43; }
+.tone-info { background: #f5ff00; }
+
+.info-round {
+  border-radius: 50%;
+  border: 2px solid #232323;
+}
+
+.main-zone {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 136px minmax(0, 1fr) 18px;
+  gap: 8px;
+}
+
+.module-description {
+  border-radius: 18px;
+  border: 2px solid #bde7f1;
+  background: #dbdbde;
+  padding: 10px 20px;
   overflow: hidden;
-  /* handle internal scroll in panels */
-  position: relative;
+}
+
+.module-description.panel-red { border-color: #FF4757; background: rgba(255, 71, 87, 0.10); }
+.module-description.panel-yellow { border-color: #FFC312; background: rgba(255, 195, 18, 0.14); }
+.module-description.panel-green { border-color: #2ED573; background: rgba(46, 213, 115, 0.11); }
+.module-description.panel-blue { border-color: #1E90FF; background: rgba(30, 144, 255, 0.11); }
+.module-description.panel-pink { border-color: #FF6B81; background: rgba(255, 107, 129, 0.11); }
+.module-description.panel-cyan { border-color: #00D2D3; background: rgba(0, 210, 211, 0.12); }
+.module-description.panel-orange { border-color: #FF9F43; background: rgba(255, 159, 67, 0.12); }
+.module-description.panel-info { border-color: #f5ff00; background: rgba(245, 255, 0, 0.12); }
+
+.module-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.module-title-row h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #253046;
+  font-weight: 700;
+}
+
+.module-desc-text {
+  margin: 8px 0 0;
+  font-size: 0.93rem;
+  line-height: 1.35;
+  color: #4a5568;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.module-workspace {
+  border-radius: 18px;
+  border: 2px solid #bde7f1;
+  background: #dbdbde;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.status-bar {
+  background: #b8b1b4;
+  border-radius: 0 0 14px 14px;
+  color: #333;
+  font-size: 0.72rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
 }
 
 .tab-content {
-  padding: 20px;
+  padding: 16px;
   height: 100%;
   box-sizing: border-box;
-  animation: fadeIn 0.3s ease;
   overflow-y: auto;
 }
 
 .primary-btn {
   background: var(--accent);
-  color: white;
+  color: #fff;
   border: none;
   padding: 10px 20px;
   border-radius: 8px;
   font-weight: 600;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.primary-btn:hover {
-  background: var(--accent-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.15);
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .status-dot {
@@ -153,16 +184,15 @@
 }
 
 .status-dot.success {
-  background-color: var(--success);
-  box-shadow: 0 0 5px var(--success);
+  background-color: #2ED573;
+  box-shadow: 0 0 5px #2ED573;
 }
 
 @media print {
-
-  .app-header,
-  .sidebar,
+  .left-menu,
+  .module-description,
+  .status-bar,
   button:not(.print-hide),
-  /* Hide all buttons except... wait, hide all buttons usually */
   .input-control,
   .divider,
   .save-section,
@@ -171,17 +201,16 @@
     display: none !important;
   }
 
-  /* Override specific buttons */
   button {
     display: none !important;
   }
 
-  /* Reset Layout */
   html,
   body,
   #root,
   .app-container,
-  .app-content {
+  .main-zone,
+  .module-workspace {
     height: auto !important;
     min-height: auto !important;
     overflow: visible !important;
@@ -196,86 +225,6 @@
     background: white !important;
     box-shadow: none !important;
     border: none !important;
-    color: black !important;
-  }
-
-  /* Typography Colors */
-  h1,
-  h2,
-  h3,
-  h4,
-  p,
-  span,
-  div,
-  li {
-    color: black !important;
-    text-shadow: none !important;
-  }
-
-  .text-secondary {
-    color: #555 !important;
-  }
-
-  /* Chart & Card visibility */
-  .glass-panel {
-    background: white !important;
-    border: none !important;
-    backdrop-filter: none !important;
-  }
-
-  .kpi-card {
-    background: white !important;
-    border: 1px solid #ccc !important;
-    color: black !important;
-  }
-
-  .kpi-value {
-    color: black !important;
-  }
-
-  /* Table */
-  table {
-    width: 100% !important;
-  }
-
-  th {
-    background: #f0f0f0 !important;
-    color: black !important;
-    border-bottom: 2px solid #000 !important;
-  }
-
-  td {
-    border-bottom: 1px solid #ddd !important;
-    color: black !important;
-  }
-
-  /* Chart Container */
-  .chart-container {
-    background: white !important;
-    border: 1px solid #ddd !important;
-    page-break-inside: avoid;
-  }
-
-  .chart-point text {
-    fill: black !important;
-  }
-
-  /* Print Settings */
-  @page {
-    size: A4;
-    margin: 1cm;
-  }
-
-  /* Ensure backgrounds like chart lines print */
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Hide badge backgrounds if too dark, make them outline */
-  .badge {
-    background: transparent !important;
-    border: 1px solid #000 !important;
     color: black !important;
   }
 }

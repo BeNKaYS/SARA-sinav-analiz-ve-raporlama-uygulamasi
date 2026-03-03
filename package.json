@@ -1,10 +1,10 @@
 {
-  "name": "optik-degerlendirme-app",
+  "name": "sara-sinav-analiz-ve-raporlama-uygulamasi",
   "main": "electron/main.cjs",
-  "description": "Sınav Değerlendirme Uygulaması",
+  "description": "SARA - Sınav Analiz ve Raporlama Uygulaması",
   "author": "Sercan ÖZDEMİR <sercanozdemir@yandex.com>",
   "private": true,
-  "version": "1.6.1",
+  "version": "1.6.2",
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"npm run vite\" \"npm run electron\"",
@@ -15,8 +15,8 @@
     "preview": "vite preview"
   },
   "build": {
-    "appId": "com.sercanozdemir.optik-degerlendirme",
-    "productName": "Optik Değerlendirme",
+    "appId": "com.sercanozdemir.sara",
+    "productName": "SARA - Sınav Analiz ve Raporlama Uygulaması",
     "afterPack": "./scripts/afterPack.cjs",
     "directories": {
       "output": "release"
@@ -66,7 +66,7 @@
       "language": "1055",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Optik Değerlendirme",
+      "shortcutName": "SARA - Sınav Analiz ve Raporlama Uygulaması",
       "installerIcon": "public/icon.ico",
       "uninstallerIcon": "public/icon.ico"
     },

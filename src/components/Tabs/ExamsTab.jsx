@@ -24,12 +24,13 @@ export default function ExamsTab({
     const [examName, setExamName] = useState('');
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState(null);
+    const [showStartConfirm, setShowStartConfirm] = useState(false);
+    const [loadConfirmExam, setLoadConfirmExam] = useState(null);
 
     // Sınav Ayarları State'leri (localStorage'dan başlat veya varsayılan)
     const [questionCount, setQuestionCount] = useState(() => localStorage.getItem('def_questionCount') || 100);
-    const [scoringType, setScoringType] = useState(() => localStorage.getItem('def_scoringType') || 'net'); // 'net' | 'correct'
+    const [scoringType, setScoringType] = useState(() => localStorage.getItem('def_scoringType') || 'correct'); // 'net' | 'correct'
     const [wrongRatio, setWrongRatio] = useState(() => localStorage.getItem('def_wrongRatio') || '4'); // '0', '3', '4'
-    const [roundScores, setRoundScores] = useState(() => localStorage.getItem('def_roundScores') === 'true');
     const [passGrade, setPassGrade] = useState(() => localStorage.getItem('def_passGrade') || '50');
 
     // Ayarlar değiştikçe kaydet
@@ -37,9 +38,9 @@ export default function ExamsTab({
         localStorage.setItem('def_questionCount', questionCount);
         localStorage.setItem('def_scoringType', scoringType);
         localStorage.setItem('def_wrongRatio', wrongRatio);
-        localStorage.setItem('def_roundScores', roundScores);
         localStorage.setItem('def_passGrade', passGrade);
-    }, [questionCount, scoringType, wrongRatio, roundScores, passGrade]);
+        localStorage.removeItem('def_roundScores');
+    }, [questionCount, scoringType, wrongRatio, passGrade]);
 
     // -------------------------------------------------------------------------
     //  YARDIMCI ENDPOİNTS VEYA MANTIK
@@ -73,7 +74,6 @@ export default function ExamsTab({
                 questionCount: Number(questionCount),
                 scoringType,
                 wrongRatio: Number(wrongRatio),
-                roundScores,
                 passGrade: Number(passGrade)
             });
             setMsg({ type: 'success', text: 'Ayarlar güncellendi ve kaydedildi.' });
@@ -88,6 +88,12 @@ export default function ExamsTab({
         refreshExams();
     }, []);
 
+    useEffect(() => {
+        if (scoringType === 'correct' && wrongRatio !== '0') {
+            setWrongRatio('0');
+        }
+    }, [scoringType, wrongRatio]);
+
     // -------------------------------------------------------------------------
     //  İŞLEYİCİLER (HANDLERS)
     // -------------------------------------------------------------------------
@@ -99,6 +105,7 @@ export default function ExamsTab({
      * 3. Uygulama state'ini günceller ve kullanıcıyı Yoklama sekmesine yönlendirir.
      */
     const handleStart = async () => {
+        setShowStartConfirm(false);
         setLoading(true);
         try {
             // Tarih etiketi oluştur
@@ -123,7 +130,6 @@ export default function ExamsTab({
                         questionCount: Number(questionCount),
                         scoringType,
                         wrongRatio: Number(wrongRatio),
-                        roundScores,
                         passGrade: Number(passGrade)
                     }
                 }
@@ -145,6 +151,23 @@ export default function ExamsTab({
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleStartClick = () => {
+        if (loading) return;
+        setShowStartConfirm(true);
+    };
+
+    const handleLoadClick = (exam) => {
+        if (loading) return;
+        setLoadConfirmExam(exam);
+    };
+
+    const handleConfirmLoad = async () => {
+        if (!loadConfirmExam?.id) return;
+        const examId = loadConfirmExam.id;
+        setLoadConfirmExam(null);
+        await handleLoadExam(examId);
     };
 
     /**
@@ -219,7 +242,7 @@ export default function ExamsTab({
                         </div>
                         <button
                             className="modern-start-btn"
-                            onClick={handleStart}
+                            onClick={handleStartClick}
                             disabled={loading}
                         >
                             <span className="btn-icon">▶</span>
@@ -248,8 +271,8 @@ export default function ExamsTab({
                                     onChange={(e) => setScoringType(e.target.value)}
                                     className="modern-exam-input small"
                                 >
-                                    <option value="net">Net Üzerinden</option>
                                     <option value="correct">Doğru Sayısı</option>
+                                    <option value="net">Net Sayısı</option>
                                 </select>
                             </div>
                             <div className="modern-input-wrapper">
@@ -258,6 +281,7 @@ export default function ExamsTab({
                                     value={wrongRatio}
                                     onChange={(e) => setWrongRatio(e.target.value)}
                                     className="modern-exam-input small"
+                                    disabled={scoringType === 'correct'}
                                 >
                                     <option value="0">Yok</option>
                                     <option value="3">3 Yanlış 1 Doğruyu</option>
@@ -274,15 +298,6 @@ export default function ExamsTab({
                                     onChange={(e) => setPassGrade(e.target.value)}
                                     className="modern-exam-input small"
                                 />
-                            </div>
-                            <div className="modern-input-wrapper checkbox-container">
-                                <label>&nbsp;</label>
-                                <div className="checkbox-wrapper" onClick={() => setRoundScores(!roundScores)}>
-                                    <div className={`custom-checkbox ${roundScores ? 'checked' : ''}`}>
-                                        {roundScores && '✓'}
-                                    </div>
-                                    <label style={{ cursor: 'pointer', margin: 0 }}>Puanları Yuvarla</label>
-                                </div>
                             </div>
                             <button
                                 className="apply-settings-btn"
@@ -334,8 +349,8 @@ export default function ExamsTab({
                                                 <div className="data-badges">
                                                     {/* Ayar Özeti Etiketi */}
                                                     {exam.settings && (
-                                                        <span className="badge badge-settings" title="Soru Sayısı | Puanlama | Geçer Not | Yuvarlama">
-                                                            {`${exam.settings.questionCount || 0}${exam.settings.scoringType === 'correct' ? 'D' : 'N'}${exam.settings.passGrade || 0}${exam.settings.roundScores ? 'Y' : ''}`}
+                                                        <span className="badge badge-settings" title="Soru Sayısı | Puanlama | Geçer Not">
+                                                            {`${exam.settings.questionCount || 0}${exam.settings.scoringType === 'correct' ? 'D' : 'N'}${exam.settings.passGrade || 0}`}
                                                         </span>
                                                     )}
                                                     {hasAtt && <span className="badge badge-blue">Yoklama</span>}
@@ -347,7 +362,7 @@ export default function ExamsTab({
                                             <td style={{ textAlign: 'right' }}>
                                                 <button
                                                     className="action-btn load-btn"
-                                                    onClick={() => handleLoadExam(exam.id)}
+                                                    onClick={() => handleLoadClick(exam)}
                                                     title="Yükle"
                                                 >
                                                     📂 Yükle
@@ -368,6 +383,71 @@ export default function ExamsTab({
                     </div>
                 )}
             </div>
+
+            {showStartConfirm && (
+                <div className="start-confirm-overlay" onClick={() => setShowStartConfirm(false)}>
+                    <div className="start-confirm-modal" onClick={(e) => e.stopPropagation()}>
+                        <h3>Sınav Ayar Onayı</h3>
+                        <p className="start-confirm-text">Bu ayarlar sınavın tamamını etkileyecektir. Başlatmadan önce kontrol edin.</p>
+                        <div className="start-settings-list">
+                            <div><strong>Soru Sayısı:</strong> {questionCount}</div>
+                            <div><strong>Puanlama:</strong> {scoringType === 'correct' ? 'Doğru Sayısı' : 'Net Sayısı'}</div>
+                            <div><strong>Yanlış Götürme:</strong> {scoringType === 'correct' ? 'Pasif (Doğru Sayısı seçili)' : (wrongRatio === '0' ? 'Yok' : `${wrongRatio} Yanlış 1 Doğruyu`)}</div>
+                            <div><strong>Geçer Not:</strong> {passGrade}</div>
+                            <div><strong>Puan Hassasiyeti:</strong> 1 ondalık basamak</div>
+                        </div>
+                        <div className="start-confirm-actions">
+                            <button className="action-btn" onClick={() => setShowStartConfirm(false)}>
+                                Vazgeç
+                            </button>
+                            <button className="modern-start-btn" onClick={handleStart} disabled={loading}>
+                                {loading ? 'Oluşturuluyor...' : 'Onayla ve Başlat'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {loadConfirmExam && (
+                <div className="start-confirm-overlay" onClick={() => setLoadConfirmExam(null)}>
+                    <div className="start-confirm-modal" onClick={(e) => e.stopPropagation()}>
+                        <h3>Sınav Yükleme Onayı</h3>
+                        <p className="start-confirm-text">
+                            <strong>{loadConfirmExam.name}</strong> sınavını yüklemek üzeresiniz. Bu işlemle kayıtlı veriler ekrana getirilecektir.
+                        </p>
+                        <div className="start-settings-list">
+                            <div><strong>Sınav Adı:</strong> {loadConfirmExam.name}</div>
+                            <div><strong>Kayıt Tarihi:</strong> {new Date(loadConfirmExam.timestamp).toLocaleString('tr-TR')}</div>
+                            <div><strong>Soru Sayısı:</strong> {loadConfirmExam.settings?.questionCount ?? '-'}</div>
+                            <div><strong>Puanlama:</strong> {loadConfirmExam.settings?.scoringType === 'net' ? 'Net Sayısı' : 'Doğru Sayısı'}</div>
+                            <div>
+                                <strong>Yanlış Götürme:</strong>{' '}
+                                {loadConfirmExam.settings?.scoringType === 'net'
+                                    ? (loadConfirmExam.settings?.wrongRatio ? `${loadConfirmExam.settings.wrongRatio} Yanlış 1 Doğruyu` : 'Yok')
+                                    : 'Pasif'}
+                            </div>
+                            <div><strong>Geçer Not:</strong> {loadConfirmExam.settings?.passGrade ?? '-'}</div>
+                            <div>
+                                <strong>Veri Durumu:</strong>{' '}
+                                {[
+                                    loadConfirmExam.hasAttendance ? 'Yoklama' : null,
+                                    loadConfirmExam.hasOptical ? 'Optik' : null,
+                                    loadConfirmExam.hasAnswerKey ? 'Anahtar' : null,
+                                    loadConfirmExam.hasResults ? 'Sonuç' : null
+                                ].filter(Boolean).join(', ') || 'Yüklü veri yok'}
+                            </div>
+                        </div>
+                        <div className="start-confirm-actions">
+                            <button className="action-btn" onClick={() => setLoadConfirmExam(null)}>
+                                Vazgeç
+                            </button>
+                            <button className="modern-start-btn" onClick={handleConfirmLoad} disabled={loading}>
+                                {loading ? 'Yükleniyor...' : 'Onayla ve Yükle'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style>{`
                 /* ===== MODERN EXAM CREATOR ===== */
@@ -493,46 +573,6 @@ export default function ExamsTab({
                     font-size: 0.9rem;
                 }
 
-                .checkbox-container {
-                    grid-column: span 1;
-                    display: flex;
-                    flex-direction: column;
-                }
-
-                .checkbox-wrapper {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    cursor: pointer;
-                    background: rgba(255, 255, 255, 0.15);
-                    padding: 0 10px;
-                    border-radius: 10px;
-                    height: 100%;
-                    min-height: 38px;
-                    width: 100%;
-                    box-sizing: border-box;
-                }
-
-                .custom-checkbox {
-                    width: 18px;
-                    height: 18px;
-                    border: 2px solid rgba(255, 255, 255, 0.6);
-                    border-radius: 4px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: white;
-                    font-weight: bold;
-                    font-size: 12px;
-                    transition: all 0.2s;
-                    flex-shrink: 0;
-                }
-
-                .custom-checkbox.checked {
-                    background: #f59e0b;
-                    border-color: #f59e0b;
-                }
-
                 .input-icon {
                     position: absolute;
                     left: 14px;
@@ -562,6 +602,12 @@ export default function ExamsTab({
                     outline: none;
                     border-color: #fbbf24;
                     box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.2);
+                }
+
+                .modern-exam-input:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                    background: rgba(255, 255, 255, 0.75);
                 }
 
                 .modern-exam-input::placeholder {
@@ -846,6 +892,55 @@ export default function ExamsTab({
 
                 .light-mode .empty-state {
                     color: #94a3b8;
+                }
+
+                .start-confirm-overlay {
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(0, 0, 0, 0.55);
+                    z-index: 1200;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    padding: 16px;
+                }
+
+                .start-confirm-modal {
+                    width: 520px;
+                    max-width: 100%;
+                    background: white;
+                    border-radius: 12px;
+                    padding: 20px;
+                    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
+                    color: #1e293b;
+                }
+
+                .start-confirm-modal h3 {
+                    margin: 0 0 10px 0;
+                    font-size: 1.3rem;
+                }
+
+                .start-confirm-text {
+                    margin: 0 0 12px 0;
+                    color: #475569;
+                    font-size: 0.95rem;
+                }
+
+                .start-settings-list {
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 10px;
+                    padding: 12px;
+                    display: grid;
+                    gap: 8px;
+                    margin-bottom: 14px;
+                    font-size: 0.95rem;
+                }
+
+                .start-confirm-actions {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 10px;
                 }
             `}</style>
         </div >

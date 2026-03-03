@@ -11,7 +11,7 @@
  * @param {Array} attendanceList - Excel'den okunan yoklama listesi (JSON array)
  * @param {Array} opticalList - TXT'den okunan ve parse edilen optik veri listesi
  * @param {Object} answerKeyData - Kitapçık ve Belge türüne göre cevap anahtarları
- * @param {Object} settings - Sınav ayarları (questionCount, scoringType, wrongRatio, roundScores)
+ * @param {Object} settings - Sınav ayarları (questionCount, scoringType, wrongRatio, passGrade)
  * 
  * @returns {Array} - Değerlendirilmiş öğrenci sonuç listesi
  * @throws {Error} - Kritik veri eksikse hata fırlatır
@@ -22,7 +22,6 @@ export const evaluateExam = (attendanceList, opticalList, answerKeyData, setting
         questionCount = 40,
         scoringType = 'correct',
         wrongRatio = 0,
-        roundScores = false,
         passGrade = 50
     } = settings || {};
     // answerKeyData Yapısı: { "A": { "ÜDY3": { 1: "A"... } }, "B": ... }
@@ -140,16 +139,11 @@ export const evaluateExam = (attendanceList, opticalList, answerKeyData, setting
                             score = (d / questionCount) * 100;
                         }
 
-                        // Yuvarlama
-                        if (roundScores) {
-                            score = Math.round(score);
-                        }
-
                         // Sonuçları ata
                         result['Doğru'] = d;
                         result['Yanlış'] = y;
                         result['Boş'] = b;
-                        result['Puan'] = roundScores ? score : score.toFixed(2);
+                        result['Puan'] = score.toFixed(1);
                         result['Net'] = net.toFixed(2); // Net bilgisini de arka planda tutalım
                         result['Sonuç'] = score >= passGrade ? 'Başarılı' : 'Başarısız';
                         // Cevapları array olarak kaydet (string ise split et)
