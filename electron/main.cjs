@@ -122,6 +122,7 @@ function createWindow() {
         height: 800,
         title: APP_NAME, // Pencere başlığı
         icon: getIconPath(), // Uygulama ikonu
+        autoHideMenuBar: true,
         show: false, // Hazır olana kadar gizle
         webPreferences: {
             preload: path.join(__dirname, 'preload.cjs'), // Preload scripti
@@ -129,6 +130,8 @@ function createWindow() {
             nodeIntegration: false  // Node.js entegrasyonu kapalı (Güvenlik)
         }
     });
+
+    mainWindow.setMenuBarVisibility(false);
 
     // Pencere hazır olduğunda tam ekran göster
     mainWindow.once('ready-to-show', () => {
@@ -159,8 +162,8 @@ function createWindow() {
 
 // Uygulama hazır olduğunda pencereyi aç
 app.whenReady().then(() => {
-    // Türkçe menüyü ayarla
-    Menu.setApplicationMenu(createMenu());
+    // Üst menü çubuğunu tamamen kaldır
+    Menu.setApplicationMenu(null);
 
     createWindow();
 
